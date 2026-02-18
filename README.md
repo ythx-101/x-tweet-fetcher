@@ -78,9 +78,9 @@ python3 scripts/fetch_tweet.py --url "https://x.com/user/status/123456" --replie
 
 ```json
 {
-  "author": "@YuLin807",
-  "author_name": "Qingyue",
-  "text": "推文内容",
+  "author": "@username",
+  "author_name": "Display Name",
+  "text": "推文正文内容",
   "time_ago": "2h",
   "likes": 42,
   "retweets": 5,
