@@ -20,6 +20,101 @@ from typing import Optional, Dict, List, Any
 
 
 # ---------------------------------------------------------------------------
+# i18n — bilingual messages (zh default, en via --lang en)
+# ---------------------------------------------------------------------------
+
+_MESSAGES = {
+    "zh": {
+        # stderr progress
+        "opening_via_camofox": "[x-tweet-fetcher] 正在通过 Camofox 打开 {url} ...",
+        "camofox_tab_error": "[Camofox] 打开标签页失败: {err}",
+        "camofox_snapshot_error": "[Camofox] 获取快照失败: {err}",
+        # error field values (go into JSON output)
+        "err_camofox_not_running_user": (
+            "Camofox 未在 localhost:{port} 运行。"
+            "使用 --user 前请先启动 Camofox。"
+            "参考: https://github.com/openclaw/camofox"
+        ),
+        "err_camofox_not_running_replies": (
+            "Camofox 未在 localhost:{port} 运行。"
+            "使用 --replies 前请先启动 Camofox。"
+            "参考: https://github.com/openclaw/camofox"
+        ),
+        "err_snapshot_failed": "无法从 Camofox 获取页面快照",
+        "err_mutually_exclusive": "错误：--user 和 --url 不能同时使用",
+        "err_no_input": "错误：请提供 --url 或 --user",
+        "err_prefix": "错误：",
+        # warning field values
+        "warn_no_tweets": (
+            "未解析到推文。Nitter 可能触发了频率限制，或该用户不存在，请稍后重试。"
+        ),
+        "warn_no_replies": (
+            "未解析到评论。该推文可能没有回复，或 Nitter 触发了频率限制，请稍后重试。"
+        ),
+        # text-only labels
+        "timeline_header": "@{user} — 最新 {count} 条推文",
+        "replies_header": "{url} 的评论区",
+        "media_label": "🖼 {n} 张图片",
+        "media_label_with_urls": "🖼 {n} 张图片: {urls}",
+        # article/tweet text-only
+        "article_by": "作者 @{screen_name} | {created_at}",
+        "article_stats": "点赞: {likes} | 转推: {retweets} | 浏览: {views}",
+        "article_words": "字数: {word_count}",
+        "tweet_stats": "\n点赞: {likes} | 转推: {retweets} | 浏览: {views}",
+        # FxTwitter network error
+        "err_network": "网络错误：重试后仍无法获取推文",
+        "err_unexpected": "获取推文时发生意外错误",
+    },
+    "en": {
+        "opening_via_camofox": "[x-tweet-fetcher] Opening {url} via Camofox...",
+        "camofox_tab_error": "[Camofox] open tab error: {err}",
+        "camofox_snapshot_error": "[Camofox] snapshot error: {err}",
+        "err_camofox_not_running_user": (
+            "Camofox is not running on localhost:{port}. "
+            "Please start Camofox before using --user. "
+            "See: https://github.com/openclaw/camofox"
+        ),
+        "err_camofox_not_running_replies": (
+            "Camofox is not running on localhost:{port}. "
+            "Please start Camofox before using --replies. "
+            "See: https://github.com/openclaw/camofox"
+        ),
+        "err_snapshot_failed": "Failed to get page snapshot from Camofox",
+        "err_mutually_exclusive": "Error: --user and --url are mutually exclusive",
+        "err_no_input": "Error: provide --url or --user",
+        "err_prefix": "Error: ",
+        "warn_no_tweets": (
+            "No tweets parsed. Nitter may be rate-limited or the user doesn't exist. "
+            "Try again later."
+        ),
+        "warn_no_replies": (
+            "No replies parsed. The tweet may have no replies, "
+            "or Nitter may be rate-limited. Try again later."
+        ),
+        "timeline_header": "@{user} — latest {count} tweets",
+        "replies_header": "Replies to {url}",
+        "media_label": "🖼 {n} media",
+        "media_label_with_urls": "🖼 {n} image(s): {urls}",
+        "article_by": "By @{screen_name} | {created_at}",
+        "article_stats": "Likes: {likes} | Retweets: {retweets} | Views: {views}",
+        "article_words": "Words: {word_count}",
+        "tweet_stats": "\nLikes: {likes} | Retweets: {retweets} | Views: {views}",
+        "err_network": "Network error: Failed to fetch tweet after retry",
+        "err_unexpected": "An unexpected error occurred while fetching the tweet",
+    },
+}
+
+# Module-level lang (set once in main(), read everywhere)
+_lang: str = "zh"
+
+
+def t(key: str, **kwargs) -> str:
+    """Look up a message in the current language, formatting with kwargs."""
+    msg = _MESSAGES.get(_lang, _MESSAGES["zh"]).get(key, key)
+    return msg.format(**kwargs) if kwargs else msg
+
+
+# ---------------------------------------------------------------------------
 # Camofox helpers
 # ---------------------------------------------------------------------------
 
@@ -52,7 +147,7 @@ def camofox_open_tab(url: str, session_key: str, port: int = 9377) -> Optional[s
             data = json.loads(resp.read().decode())
         return data.get("tabId")
     except Exception as e:
-        print(f"[Camofox] open tab error: {e}", file=sys.stderr)
+        print(t("camofox_tab_error", err=e), file=sys.stderr)
         return None
 
 
@@ -64,7 +159,7 @@ def camofox_snapshot(tab_id: str, port: int = 9377) -> Optional[str]:
             data = json.loads(resp.read().decode())
         return data.get("snapshot", "")
     except Exception as e:
-        print(f"[Camofox] snapshot error: {e}", file=sys.stderr)
+        print(t("camofox_snapshot_error", err=e), file=sys.stderr)
         return None
 
 
@@ -239,13 +334,13 @@ def fetch_tweet(url: str, timeout: int = 30) -> Dict[str, Any]:
                 time.sleep(1)
                 continue
             else:
-                result["error"] = "Network error: Failed to fetch tweet after retry"
+                result["error"] = t("err_network")
                 return result
         except urllib.error.HTTPError as e:
             result["error"] = f"HTTP {e.code}: {e.reason}"
             return result
         except Exception:
-            result["error"] = "An unexpected error occurred while fetching the tweet"
+            result["error"] = t("err_unexpected")
             return result
 
     return result
@@ -627,15 +722,11 @@ def fetch_user_timeline(
     result = {"username": username, "limit": limit}
 
     if not check_camofox(camofox_port):
-        result["error"] = (
-            f"Camofox is not running on localhost:{camofox_port}. "
-            "Please start Camofox before using --user. "
-            "See: https://github.com/openclaw/camofox"
-        )
+        result["error"] = t("err_camofox_not_running_user", port=camofox_port)
         return result
 
     nitter_url = f"https://{nitter_instance}/{username}"
-    print(f"[x-tweet-fetcher] Opening {nitter_url} via Camofox...", file=sys.stderr)
+    print(t("opening_via_camofox", url=nitter_url), file=sys.stderr)
 
     snapshot = camofox_fetch_page(
         nitter_url,
@@ -645,7 +736,7 @@ def fetch_user_timeline(
     )
 
     if not snapshot:
-        result["error"] = "Failed to get page snapshot from Camofox"
+        result["error"] = t("err_snapshot_failed")
         return result
 
     tweets = parse_timeline_snapshot(snapshot, limit=limit)
@@ -653,10 +744,7 @@ def fetch_user_timeline(
     result["count"] = len(tweets)
 
     if len(tweets) == 0:
-        result["warning"] = (
-            "No tweets parsed. Nitter may be rate-limited or the user doesn't exist. "
-            "Try again later."
-        )
+        result["warning"] = t("warn_no_tweets")
 
     return result
 
@@ -675,15 +763,11 @@ def fetch_tweet_replies(
     result = {"url": url, "username": username, "tweet_id": tweet_id}
 
     if not check_camofox(camofox_port):
-        result["error"] = (
-            f"Camofox is not running on localhost:{camofox_port}. "
-            "Please start Camofox before using --replies. "
-            "See: https://github.com/openclaw/camofox"
-        )
+        result["error"] = t("err_camofox_not_running_replies", port=camofox_port)
         return result
 
     nitter_url = f"https://{nitter_instance}/{username}/status/{tweet_id}"
-    print(f"[x-tweet-fetcher] Opening {nitter_url} via Camofox...", file=sys.stderr)
+    print(t("opening_via_camofox", url=nitter_url), file=sys.stderr)
 
     snapshot = camofox_fetch_page(
         nitter_url,
@@ -693,7 +777,7 @@ def fetch_tweet_replies(
     )
 
     if not snapshot:
-        result["error"] = "Failed to get page snapshot from Camofox"
+        result["error"] = t("err_snapshot_failed")
         return result
 
     replies = parse_replies_snapshot(snapshot, original_author=username)
@@ -701,10 +785,7 @@ def fetch_tweet_replies(
     result["reply_count"] = len(replies)
 
     if len(replies) == 0:
-        result["warning"] = (
-            "No replies parsed. The tweet may have no replies, "
-            "or Nitter may be rate-limited. Try again later."
-        )
+        result["warning"] = t("warn_no_replies")
 
     return result
 
@@ -714,6 +795,8 @@ def fetch_tweet_replies(
 # ---------------------------------------------------------------------------
 
 def main():
+    global _lang
+
     parser = argparse.ArgumentParser(
         description=(
             "Fetch tweets from X/Twitter.\n"
@@ -732,12 +815,19 @@ def main():
     parser.add_argument("--timeout", type=int, default=30, help="Request timeout in seconds (default: 30)")
     parser.add_argument("--port", type=int, default=9377, help="Camofox port (default: 9377)")
     parser.add_argument("--nitter", default="nitter.net", help="Nitter instance (default: nitter.net)")
+    parser.add_argument(
+        "--lang", default="zh", choices=["zh", "en"],
+        help="Output language for tool messages: zh (default) or en",
+    )
 
     args = parser.parse_args()
 
+    # Apply language setting globally before any t() calls
+    _lang = args.lang
+
     # Validate argument combinations
     if args.user and args.url:
-        print("Error: --user and --url are mutually exclusive", file=sys.stderr)
+        print(t("err_mutually_exclusive"), file=sys.stderr)
         sys.exit(1)
 
     if not args.user and not args.url:
@@ -757,16 +847,16 @@ def main():
 
         if args.text_only:
             if result.get("error"):
-                print(f"Error: {result['error']}", file=sys.stderr)
+                print(t("err_prefix") + result["error"], file=sys.stderr)
                 sys.exit(1)
             tweets = result.get("tweets", [])
-            print(f"@{args.user} — latest {len(tweets)} tweets\n")
-            for idx, t in enumerate(tweets, 1):
-                print(f"[{idx}] {t['author_name']} ({t['author']}) · {t.get('time_ago', '')}")
-                print(f"     {t['text']}")
-                stats = f"     ❤ {t['likes']}  💬 {t['replies']}  👁 {t['views']}"
-                if t.get("media"):
-                    stats += f"  🖼 {len(t['media'])} media"
+            print(t("timeline_header", user=args.user, count=len(tweets)) + "\n")
+            for idx, tw in enumerate(tweets, 1):
+                print(f"[{idx}] {tw['author_name']} ({tw['author']}) · {tw.get('time_ago', '')}")
+                print(f"     {tw['text']}")
+                stats = f"     ❤ {tw['likes']}  💬 {tw['replies']}  👁 {tw['views']}"
+                if tw.get("media"):
+                    stats += "  " + t("media_label", n=len(tw["media"]))
                 print(stats)
                 print()
         else:
@@ -786,16 +876,16 @@ def main():
 
         if args.text_only:
             if result.get("error"):
-                print(f"Error: {result['error']}", file=sys.stderr)
+                print(t("err_prefix") + result["error"], file=sys.stderr)
                 sys.exit(1)
             replies = result.get("replies", [])
-            print(f"Replies to {args.url}\n")
+            print(t("replies_header", url=args.url) + "\n")
             for idx, r in enumerate(replies, 1):
                 print(f"[{idx}] {r['author_name']} ({r['author']}) · {r.get('time_ago', '')}")
                 print(f"     {r['text']}")
                 stats = f"     ❤ {r['likes']}  💬 {r['replies']}  👁 {r['views']}"
                 if r.get("media"):
-                    stats += f"  🖼 {len(r['media'])} image(s): " + ", ".join(r["media"])
+                    stats += "  " + t("media_label_with_urls", n=len(r["media"]), urls=", ".join(r["media"]))
                 print(stats)
                 print()
         else:
@@ -813,15 +903,15 @@ def main():
         if tweet.get("is_article") and tweet.get("article", {}).get("full_text"):
             article = tweet["article"]
             print(f"# {article['title']}\n")
-            print(f"By @{tweet['screen_name']} | {tweet.get('created_at', '')}")
-            print(f"Likes: {tweet['likes']} | Retweets: {tweet['retweets']} | Views: {tweet['views']}")
-            print(f"Words: {article['word_count']}\n")
+            print(t("article_by", screen_name=tweet["screen_name"], created_at=tweet.get("created_at", "")))
+            print(t("article_stats", likes=tweet["likes"], retweets=tweet["retweets"], views=tweet["views"]))
+            print(t("article_words", word_count=article["word_count"]) + "\n")
             print(article["full_text"])
         elif tweet.get("text"):
             print(f"@{tweet['screen_name']}: {tweet['text']}")
-            print(f"\nLikes: {tweet['likes']} | Retweets: {tweet['retweets']} | Views: {tweet['views']}")
+            print(t("tweet_stats", likes=tweet["likes"], retweets=tweet["retweets"], views=tweet["views"]))
         elif result.get("error"):
-            print(f"Error: {result['error']}", file=sys.stderr)
+            print(t("err_prefix") + result["error"], file=sys.stderr)
             sys.exit(1)
     else:
         print(json.dumps(result, ensure_ascii=False, indent=indent))
