@@ -321,6 +321,21 @@ def fetch_tweet(url: str, timeout: int = 30) -> Dict[str, Any]:
                     article_data["full_text"] = full_text
                     article_data["word_count"] = len(full_text.split())
                     article_data["char_count"] = len(full_text)
+                # 提取 article 内的图片
+                article_images = []
+                cover = article.get("cover_media", {})
+                if cover:
+                    cover_url = cover.get("media_info", {}).get("original_img_url")
+                    if cover_url:
+                        article_images.append({"type": "cover", "url": cover_url})
+                for entity in article.get("media_entities", []):
+                    img_url = entity.get("media_info", {}).get("original_img_url")
+                    if img_url:
+                        article_images.append({"type": "image", "url": img_url})
+                if article_images:
+                    article_data["images"] = article_images
+                    article_data["image_count"] = len(article_images)
+
                 tweet_data["article"] = article_data
                 tweet_data["is_article"] = True
             else:
@@ -712,36 +727,107 @@ def parse_replies_snapshot(snapshot: str, original_author: str) -> List[Dict]:
 # High-level feature functions
 # ---------------------------------------------------------------------------
 
+def extract_next_cursor(snapshot: str) -> Optional[str]:
+    """Extract the next-page cursor from a Nitter timeline snapshot.
+
+    Nitter aria snapshot format for the "Load more" link:
+        - link "Load more" [eN]:
+          - /url: "?cursor=XXXXXX"
+
+    Returns the raw cursor string (URL-decoded), or None if not found.
+    """
+    lines = snapshot.split("\n")
+    for i, line in enumerate(lines):
+        if 'link "Load more"' in line:
+            # Next line should be the /url: line
+            for j in range(i + 1, min(len(lines), i + 4)):
+                url_line = lines[j].strip()
+                m = re.match(r'^- /url:\s+"?\?cursor=([^"&\s]+)"?', url_line)
+                if m:
+                    return urllib.parse.unquote(m.group(1))
+    return None
+
+
 def fetch_user_timeline(
     username: str,
     limit: int = 20,
     camofox_port: int = 9377,
     nitter_instance: str = "nitter.net",
 ) -> Dict[str, Any]:
-    """Fetch user timeline via Camofox + Nitter."""
+    """Fetch user timeline via Camofox + Nitter, with multi-page support.
+
+    When limit > ~20 (one page), automatically follows Nitter's cursor-based
+    pagination until enough tweets are collected or no more pages exist.
+    """
     result = {"username": username, "limit": limit}
 
     if not check_camofox(camofox_port):
         result["error"] = t("err_camofox_not_running_user", port=camofox_port)
         return result
 
-    nitter_url = f"https://{nitter_instance}/{username}"
-    print(t("opening_via_camofox", url=nitter_url), file=sys.stderr)
+    tweets: List[Dict] = []
+    cursor: Optional[str] = None
+    page = 1
+    MAX_PAGES = 6  # safety cap — never fetch more than ~120 tweets
 
-    snapshot = camofox_fetch_page(
-        nitter_url,
-        session_key=f"timeline-{username}",
-        wait=8,
-        port=camofox_port,
-    )
+    while len(tweets) < limit and page <= MAX_PAGES:
+        if cursor:
+            encoded = urllib.parse.quote(cursor, safe="")
+            nitter_url = f"https://{nitter_instance}/{username}?cursor={encoded}"
+        else:
+            nitter_url = f"https://{nitter_instance}/{username}"
 
-    if not snapshot:
-        result["error"] = t("err_snapshot_failed")
-        return result
+        print(
+            f"[x-tweet-fetcher] 翻页 {page}/{MAX_PAGES} — {nitter_url}",
+            file=sys.stderr,
+        )
 
-    tweets = parse_timeline_snapshot(snapshot, limit=limit)
+        snapshot = camofox_fetch_page(
+            nitter_url,
+            session_key=f"timeline-{username}-p{page}",
+            wait=8,
+            port=camofox_port,
+        )
+
+        if not snapshot:
+            if page == 1:
+                result["error"] = t("err_snapshot_failed")
+                return result
+            # Partial failure on later pages — stop gracefully
+            print(f"[x-tweet-fetcher] 第 {page} 页快照失败，停止翻页", file=sys.stderr)
+            break
+
+        remaining = limit - len(tweets)
+        new_tweets = parse_timeline_snapshot(snapshot, limit=remaining)
+
+        # Deduplicate across pages by (author, text[:80])
+        seen = {(tw["author"], tw["text"][:80]) for tw in tweets}
+        for tw in new_tweets:
+            key = (tw["author"], tw["text"][:80])
+            if key not in seen:
+                tweets.append(tw)
+                seen.add(key)
+
+        print(
+            f"[x-tweet-fetcher] 第 {page} 页: +{len(new_tweets)} 条，累计 {len(tweets)} 条",
+            file=sys.stderr,
+        )
+
+        if len(new_tweets) == 0:
+            break  # no tweets on this page — Nitter probably rate-limited
+
+        # Extract cursor for next page
+        cursor = extract_next_cursor(snapshot)
+        if not cursor:
+            break  # no more pages
+
+        page += 1
+        if len(tweets) < limit:
+            time.sleep(2)  # be polite between pages
+
     result["tweets"] = tweets
     result["count"] = len(tweets)
+    result["pages_fetched"] = page
 
     if len(tweets) == 0:
         result["warning"] = t("warn_no_tweets")
