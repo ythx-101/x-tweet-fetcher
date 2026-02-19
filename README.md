@@ -36,14 +36,14 @@ python3 scripts/fetch_tweet.py --url "https://x.com/user/status/123456" --pretty
 ### 抓用户时间线（需要 Camofox）
 
 ```bash
-# 抓最新 20 条（默认）
+# 抓最新 50 条（默认，自动翻页）
 python3 scripts/fetch_tweet.py --user elonmusk
 
 # 抓最新 5 条，易读格式
 python3 scripts/fetch_tweet.py --user YuLin807 --limit 5 --text-only
 
-# JSON 输出
-python3 scripts/fetch_tweet.py --user YuLin807 --limit 10 --pretty
+# 抓 100 条，自动跨多页
+python3 scripts/fetch_tweet.py --user YuLin807 --limit 100 --pretty
 ```
 
 ### 抓评论区（需要 Camofox）
@@ -110,7 +110,7 @@ python3 scripts/fetch_tweet.py --url "https://x.com/user/status/123456" --replie
 ```
 --url URL         推文链接（x.com 或 twitter.com）
 --user USERNAME   抓用户时间线（不带 @）
---limit N         --user 最多抓几条（默认 20）
+--limit N         --user 最多抓几条（默认 50，自动翻页，最多约 200 条）
 --replies         抓评论区
 --pretty          格式化 JSON 输出
 --text-only       易读文本输出
@@ -165,7 +165,7 @@ python3 scripts/fetch_tweet.py --url "https://x.com/user/status/123456" --pretty
 ```bash
 python3 scripts/fetch_tweet.py --user elonmusk
 python3 scripts/fetch_tweet.py --user YuLin807 --limit 5 --text-only
-python3 scripts/fetch_tweet.py --user YuLin807 --limit 10 --pretty
+python3 scripts/fetch_tweet.py --user YuLin807 --limit 100 --pretty
 ```
 
 ### Tweet Replies (requires Camofox)
@@ -193,7 +193,7 @@ python3 scripts/fetch_tweet.py --url "https://x.com/user/status/123456" --replie
 ```
 --url URL         Tweet URL (x.com or twitter.com)
 --user USERNAME   Fetch user timeline (no @)
---limit N         Max tweets for --user (default: 20)
+--limit N         Max tweets for --user (default: 50, auto-paginates up to ~200)
 --replies         Fetch replies instead of single tweet
 --pretty          Pretty print JSON
 --text-only       Human-readable output

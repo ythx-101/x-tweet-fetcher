@@ -894,7 +894,7 @@ def main():
     )
     parser.add_argument("--url", "-u", help="Tweet URL (x.com or twitter.com)")
     parser.add_argument("--user", help="X/Twitter username (without @)")
-    parser.add_argument("--limit", type=int, default=20, help="Max tweets for --user (default: 20)")
+    parser.add_argument("--limit", type=int, default=50, help="Max tweets for --user (default: 50, supports pagination up to ~200)")
     parser.add_argument("--replies", "-r", action="store_true", help="Fetch replies (requires Camofox)")
     parser.add_argument("--pretty", "-p", action="store_true", help="Pretty print JSON")
     parser.add_argument("--text-only", "-t", action="store_true", help="Human-readable output")
