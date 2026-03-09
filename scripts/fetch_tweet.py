@@ -583,6 +583,10 @@ def parse_timeline_snapshot(snapshot: str, limit: int = 20) -> List[Dict]:
     # the main tweet's text content. So if we see text content (not just
     # author/handle/time) between anchor N-1 and anchor N, then N is a quote.
 
+    # 如果没有找到任何内容锚点，直接返回空列表
+    if not content_anchors:
+        return tweets
+
     primary_indices = [0]  # first anchor is always primary
     quoted_set = set()     # indices into content_anchors that are quotes
 
