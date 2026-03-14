@@ -334,15 +334,29 @@ def cross_analyze_burst(record: dict, burst: dict) -> dict:
 
 
 def _extract_keywords(record: dict) -> list[str]:
-    """从推文 label 提取关键词（简单切词）"""
+    """从推文 label 提取关键词（支持中英文混合）"""
+    import re
     label = record.get("label", "")
     if not label:
         return []
-    # 去掉常用停用词，保留有意义的词
+    # 分离中文片段和英文单词
+    # 中文：连续汉字作为一个词（2-4字切分）
+    # 英文：空格分词 + 去停用词
     stopwords = {"the", "a", "an", "and", "or", "for", "in", "of", "to", "is", "it", "on"}
-    words = [w.strip("\"'.,!?") for w in label.split() if len(w) > 2]
-    keywords = [w for w in words if w.lower() not in stopwords]
-    return keywords[:3]  # 最多3个关键词
+    keywords = []
+    # 英文单词
+    en_words = re.findall(r'[a-zA-Z]{3,}', label)
+    keywords.extend(w for w in en_words if w.lower() not in stopwords)
+    # 中文：提取连续汉字段，长段切成2-4字的词
+    cn_segments = re.findall(r'[\u4e00-\u9fff]{2,}', label)
+    for seg in cn_segments:
+        if len(seg) <= 4:
+            keywords.append(seg)
+        else:
+            # 按4字切分
+            for i in range(0, len(seg) - 1, 4):
+                keywords.append(seg[i:i+4])
+    return keywords[:4]  # 最多4个关键词
 
 
 # ─── 功能5：传播模式判断 ──────────────────────────────────────────────────────
