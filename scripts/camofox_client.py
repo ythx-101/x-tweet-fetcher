@@ -223,8 +223,11 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if "--engine" in args:
         idx = args.index("--engine")
-        engine = args[idx + 1]
-        args = args[:idx] + args[idx + 2:]
+        if idx + 1 < len(args):
+            engine = args[idx + 1]
+            args = args[:idx] + args[idx + 2:]
+        else:
+            args = args[:idx]
     query = " ".join(args) if args else "AI Agent"
     print(f"Searching ({engine}): {query}")
     results = camofox_search(query, engine=engine)

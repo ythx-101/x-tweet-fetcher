@@ -13,6 +13,7 @@ x-tweet-fetcher skill 的新功能
 import fcntl
 import json
 import os
+from typing import Optional
 import sys
 import time
 import urllib.error
@@ -67,7 +68,7 @@ def save_data(data: dict):
 
 # ─── FxTwitter 抓取 ────────────────────────────────────────────────────────────
 
-def fetch_tweet_stats(tweet_id: str, retries: int = 2) -> dict | None:
+def fetch_tweet_stats(tweet_id: str, retries: int = 2) -> Optional[dict]:
     url = FXTWITTER_API.format(tweet_id=tweet_id)
     req = urllib.request.Request(url, headers={"User-Agent": "tweet-growth/2.1"})
     for attempt in range(retries + 1):
@@ -361,7 +362,7 @@ def _extract_keywords(record: dict) -> list[str]:
 
 # ─── 功能5：传播模式判断 ──────────────────────────────────────────────────────
 
-def analyze_propagation(history: list[dict], burst: dict | None = None) -> dict:
+def analyze_propagation(history: list[dict], burst: Optional[dict] = None) -> dict:
     """
     通过 RT/浏览比的变化，判断推文是怎么火的。
     返回：{

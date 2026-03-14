@@ -346,7 +346,7 @@ class WeiboParser(PlatformParser):
                     try:
                         current_article["shares"] = parse_wan_number(nums[0])
                         current_article["comments"] = parse_wan_number(nums[1])
-                    except:
+                    except Exception:
                         pass
 
             # Likes: "    - button \"1793\" [eN]:"
@@ -1301,7 +1301,7 @@ class XiaohongshuParser(PlatformParser):
         
         try:
             # Clear old output
-            subprocess.run(['bash', '-c', f'> {cmd_output}'], timeout=3)
+            open(cmd_output, 'w').close()
             # Queue command
             with open(cmd_queue, 'w') as f:
                 f.write(curl_cmd)
