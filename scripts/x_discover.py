@@ -19,15 +19,21 @@ from datetime import datetime
 from pathlib import Path
 
 
-def search_web(query, max_results=5):
-    """Search via DuckDuckGo or Camofox Google (no API key needed)"""
+def search_web(query, max_results=5, timelimit=None):
+    """Search via DuckDuckGo or Camofox Google (no API key needed)
+
+    timelimit: 'd'=最近1天, 'w'=最近1周, 'm'=最近1月, None=不限
+    """
     # Try DuckDuckGo first
     try:
         from duckduckgo_search import DDGS
         import warnings
         warnings.filterwarnings("ignore")
         ddgs = DDGS()
-        results = ddgs.text(query, max_results=max_results)
+        kwargs = {"max_results": max_results}
+        if timelimit:
+            kwargs["timelimit"] = timelimit
+        results = ddgs.text(query, **kwargs)
         if results:
             return [{"title": r.get("title", ""), "url": r.get("href", ""), "snippet": r.get("body", "")} for r in results]
     except Exception:
@@ -62,7 +68,7 @@ def save_cache(cache, cache_file):
         Path(cache_file).write_text(json.dumps(cache, ensure_ascii=False, indent=2))
 
 
-def discover_tweets(keywords, max_results=10, cache_file=None):
+def discover_tweets(keywords, max_results=10, cache_file=None, timelimit=None):
     """
     Search for tweets matching keywords.
     
@@ -79,7 +85,7 @@ def discover_tweets(keywords, max_results=10, cache_file=None):
 
     for keyword in keywords:
         query = f"site:x.com {keyword}"
-        results = search_web(query, max_results=max_results)
+        results = search_web(query, max_results=max_results, timelimit=timelimit)
 
         for r in results:
             url = r.get('url', r.get('href', ''))
