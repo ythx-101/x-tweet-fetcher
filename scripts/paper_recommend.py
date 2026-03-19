@@ -763,17 +763,27 @@ Examples:
             except Exception as e:
                 print(f"[WARN] arxiv_author_finder failed: {e}", file=sys.stderr)
         else:
-            # No ArXiv ID — fallback: use GitHub URLs + lightweight search
-            print("[INFO] No ArXiv ID, looking up author Twitter via GitHub...", file=sys.stderr)
+            # No ArXiv ID — use GitHub + web search + verification
+            print("[INFO] No ArXiv ID, looking up author Twitter via GitHub + web search...", file=sys.stderr)
+            from arxiv_author_finder import search_twitter_for_author
             authors = paper_info.get("authors", [])
             github_urls = paper_info.get("github_urls", [])
             for author in authors[:5]:
                 if author in twitter_map:
                     continue
+                # Try GitHub first
                 handle = find_author_twitter(author, github_urls)
+                # Then web search
+                if not handle:
+                    handle = search_twitter_for_author(author)
+                # Verify before accepting
                 if handle:
-                    twitter_map[author] = handle
-                    print(f"  [Twitter] {author} -> @{handle}", file=sys.stderr)
+                    from common import verify_twitter_handle
+                    if verify_twitter_handle(handle, author):
+                        twitter_map[author] = handle
+                        print(f"  [Twitter] {author} -> @{handle}", file=sys.stderr)
+                    else:
+                        print(f"  [REJECTED] {author} -> @{handle} (profile mismatch)", file=sys.stderr)
 
         # 3b. Recommended paper authors — full finder for top papers, lightweight for rest
         if recommendations:
