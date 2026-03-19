@@ -64,11 +64,14 @@ def oa_find_paper(arxiv_id: str = None, title: str = None, doi: str = None) -> d
         if data and data.get("id"):
             return data
     if title:
-        q = urllib.parse.quote(title[:200], safe='')
+        # Clean title: remove special chars that break OpenAlex filters
+        clean_title = re.sub(r'[^a-zA-Z0-9\s]', ' ', title).strip()
+        clean_title = re.sub(r'\s+', ' ', clean_title)[:200]
+        q = urllib.parse.quote(clean_title, safe='')
         data = _oa_get(f"{OPENALEX_API}/works?filter=title.search:{q}&per_page=1&sort=cited_by_count:desc")
         if data and data.get("results"):
             return data["results"][0]
-        if len(title) > 20:
+        if len(clean_title) > 20:
             data = _oa_get(f"{OPENALEX_API}/works?search={q}&per_page=1&sort=relevance_score:desc")
             if data and data.get("results"):
                 return data["results"][0]
@@ -331,15 +334,47 @@ def extract_from_github(github_url: str) -> dict | None:
 
 
 def search_paper_by_title(title: str) -> dict | None:
-    """Search for a paper by title via OpenAlex."""
+    """Search for a paper by title via OpenAlex, with ArXiv fallback."""
     print(f"[INFO] Searching OpenAlex for: {title[:60]}...", file=sys.stderr)
     oa_paper = oa_find_paper(title=title)
+    if oa_paper:
+        found_title = oa_paper.get("title") or oa_paper.get("display_name", "")
+        sim = _title_similarity(title, found_title)
+        if sim < 0.3:
+            print(f"[WARN] OpenAlex result '{found_title[:50]}' doesn't match query (sim={sim:.2f}), skipping", file=sys.stderr)
+            oa_paper = None
+
+    # ArXiv API fallback — tolerates typos via all-OR search + similarity check
     if not oa_paper:
-        return None
-    found_title = oa_paper.get("title") or oa_paper.get("display_name", "")
-    sim = _title_similarity(title, found_title)
-    if sim < 0.3:
-        print(f"[WARN] OpenAlex result '{found_title[:50]}' doesn't match query (sim={sim:.2f}), skipping", file=sys.stderr)
+        print(f"[INFO] Trying ArXiv search...", file=sys.stderr)
+        clean = re.sub(r'[^a-zA-Z0-9\s]', ' ', title).strip()
+        stop = {"a", "an", "the", "of", "for", "and", "in", "on", "to", "with", "by", "is", "at", "from",
+                "page", "pdf", "here", "best", "parts"}
+        keywords = [w for w in clean.split() if len(w) > 3 and w.lower() not in stop][:8]
+        # Use OR so typos in any single word don't kill the whole query
+        arxiv_q = "+OR+".join(f"ti:{urllib.parse.quote(w)}" for w in keywords)
+        url = f"https://export.arxiv.org/api/query?search_query={arxiv_q}&max_results=3"
+        raw = http_get(url, timeout=20)
+        if isinstance(raw, str):
+            import xml.etree.ElementTree as ET
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            try:
+                root = ET.fromstring(raw)
+                for entry in root.findall("atom:entry", ns):
+                    entry_title = (entry.findtext("atom:title", "", ns) or "").strip().replace("\n", " ")
+                    sim = _title_similarity(title, entry_title)
+                    if sim >= 0.4:
+                        entry_id = (entry.findtext("atom:id", "", ns) or "")
+                        arxiv_id = parse_arxiv_id(entry_id)
+                        if arxiv_id:
+                            print(f"[INFO] Found on ArXiv: {entry_title[:60]} (sim={sim:.2f})", file=sys.stderr)
+                            info = fetch_arxiv_metadata(arxiv_id)
+                            if info:
+                                return info
+            except Exception:
+                pass
+
+    if not oa_paper:
         return None
     oa_work = _oa_work_to_paper(oa_paper)
     arxiv_id = (oa_work.get("externalIds") or {}).get("ArXiv")
@@ -415,7 +450,7 @@ def find_related_papers(paper_info: dict, top_n: int = 5) -> list[dict]:
     authorships = oa_paper.get("authorships", [])
     for auth in authorships[:2]:
         author_obj = auth.get("author", {})
-        author_oa_id = author_obj.get("id", "").replace("https://openalex.org/", "")
+        author_oa_id = (author_obj.get("id") or "").replace("https://openalex.org/", "")
         author_name = author_obj.get("display_name", "unknown")
         if author_oa_id:
             print(f"[INFO] Fetching papers by {author_name}...", file=sys.stderr)
