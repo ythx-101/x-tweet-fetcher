@@ -13,7 +13,7 @@ Usage:
   python3 paper_recommend.py --tweet https://x.com/user/status/123456
   python3 paper_recommend.py --github https://github.com/org/repo
   python3 paper_recommend.py --arxiv 2603.10165
-  python3 paper_recommend.py --title "Memory Sparse Attention"
+  python3 paper_recommend.py --title "Attention Is All You Need"
   python3 paper_recommend.py --arxiv 1706.03762 --top 3 --skip-twitter
   python3 paper_recommend.py --arxiv 1706.03762 --zh
 
@@ -701,7 +701,7 @@ Examples:
   python3 paper_recommend.py --tweet https://x.com/user/status/123456
   python3 paper_recommend.py --github https://github.com/org/paper-repo
   python3 paper_recommend.py --arxiv 2603.10165
-  python3 paper_recommend.py --title "Memory Sparse Attention"
+  python3 paper_recommend.py --title "Attention Is All You Need"
   python3 paper_recommend.py --arxiv 1706.03762 --top 3 --skip-twitter
   python3 paper_recommend.py --arxiv 1706.03762 --zh
         """
