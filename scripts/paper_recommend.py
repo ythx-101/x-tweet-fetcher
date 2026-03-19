@@ -421,7 +421,38 @@ def find_related_papers(paper_info: dict, top_n: int = 5) -> list[dict]:
             print(f"[INFO] Fetching papers by {author_name}...", file=sys.stderr)
             all_candidates.extend(oa_get_author_papers(author_oa_id, limit=10))
 
-    return rank_and_dedupe(all_candidates, oa_id)[:top_n]
+    ranked = rank_and_dedupe(all_candidates, oa_id)[:top_n]
+
+    # Fallback: if OpenAlex found the paper but all 4 dimensions are empty
+    # (new paper, no citations/references/related indexed yet), do keyword search
+    if not ranked:
+        print("[WARN] No results from citations/references/related — paper too new.", file=sys.stderr)
+        print("[INFO] Falling back to concept-based search...", file=sys.stderr)
+
+        # Extract domain-specific keywords from title (skip generic academic words)
+        stop = {"a", "an", "the", "of", "for", "and", "in", "on", "to", "with", "by",
+                "is", "at", "from", "comprehensive", "survey", "review", "study",
+                "towards", "landscape", "new", "novel", "based", "using", "via"}
+        keywords = [w.strip(":.,-") for w in title.split()
+                    if w.lower().strip(":.,-") not in stop and len(w) > 2]
+        search_q = " ".join(keywords[:6])
+        print(f"[INFO] Search keywords: {search_q}", file=sys.stderr)
+
+        q = urllib.parse.quote(search_q, safe='')
+        data = _oa_get(f"{OPENALEX_API}/works?search={q}&per_page={top_n * 5}&sort=relevance_score:desc")
+        if data and data.get("results"):
+            # Filter: require at least 2 title keywords overlap to avoid off-topic
+            title_words = {w.lower() for w in keywords if len(w) > 3}
+            candidates = []
+            for w in data["results"]:
+                p = _oa_work_to_paper(w, "keyword_match")
+                p_title_words = {tw.lower().strip(":.,-") for tw in (p.get("title") or "").split()}
+                overlap = title_words & p_title_words
+                if len(overlap) >= 2:
+                    candidates.append(p)
+            ranked = rank_and_dedupe(candidates, oa_id)[:top_n]
+
+    return ranked
 
 
 # ─── Author Twitter finder (lightweight, for recommended papers) ─────────────
