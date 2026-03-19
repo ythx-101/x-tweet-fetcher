@@ -223,6 +223,49 @@ def extract_twitter_from_profile(profile: dict) -> str | None:
     return profile.get("twitter") if profile else None
 
 
+def verify_twitter_handle(handle: str, expected_name: str) -> bool:
+    """
+    Verify a Twitter handle actually belongs to the expected person.
+    Uses FxTwitter API to fetch real profile and check name/bio match.
+    Returns False if the handle is clearly wrong (spam, unrelated person).
+    """
+    url = f"https://api.fxtwitter.com/{handle}"
+    data = http_get(url, timeout=10)
+    if not isinstance(data, dict):
+        return True  # Can't verify, give benefit of doubt
+
+    user = data.get("user", data)
+    tw_name = (user.get("name") or "").strip()
+    tw_bio = (user.get("description") or "").strip()
+    followers = user.get("followers", user.get("followers_count", 0)) or 0
+
+    # Red flag: very few followers and no bio
+    if followers < 20 and not tw_bio:
+        return False
+
+    expected_parts = normalize_name(expected_name).split()
+    tw_name_parts = normalize_name(tw_name).split()
+    tw_combined = normalize_name(tw_name) + " " + normalize_name(tw_bio)
+
+    if not expected_parts or len(expected_parts) < 2:
+        return True
+
+    # Require: last name must match in Twitter display name or bio
+    last_name = expected_parts[-1]
+    first_name = expected_parts[0]
+
+    if len(last_name) >= 3 and last_name not in tw_combined:
+        return False
+
+    # If last name matches, also need first name (or initial) to match
+    if len(first_name) >= 3 and first_name not in tw_combined:
+        # Allow first initial match
+        if not any(p.startswith(first_name[0]) for p in tw_name_parts):
+            return False
+
+    return True
+
+
 # ─── Name matching ────────────────────────────────────────────────────────────
 
 def normalize_name(name: str) -> str:

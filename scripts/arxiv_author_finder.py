@@ -35,7 +35,8 @@ from datetime import datetime, timezone
 from common import (
     http_get, parse_arxiv_id, fetch_arxiv_metadata,
     scrape_github_profile, scrape_repo_contributors, is_github_org,
-    extract_twitter_from_profile, normalize_name, match_name_parts,
+    extract_twitter_from_profile, verify_twitter_handle,
+    normalize_name, match_name_parts,
     match_github_to_author, match_handle_to_author,
     search_web, GITHUB_REPO_RE, TWITTER_URL_RE, TWITTER_SKIP_HANDLES,
 )
@@ -345,6 +346,14 @@ class ArxivAuthorFinder:
                     results[author] = {"handle": handle, "url": f"https://x.com/{handle}", "source": "web_search", "confidence": "low"}
                     if self.verbose:
                         print(f"  [Search] {author} -> @{handle}", file=sys.stderr)
+
+        # Verify: check each found handle against real Twitter profile
+        for author, info in results.items():
+            handle = info.get("handle")
+            if handle and not verify_twitter_handle(handle, author):
+                if self.verbose:
+                    print(f"  [REJECTED] {author} -> @{handle} (Twitter profile doesn't match)", file=sys.stderr)
+                results[author] = {"handle": None, "url": None, "source": None, "confidence": None}
 
         # Summary
         found_count = sum(1 for v in results.values() if v["handle"])
