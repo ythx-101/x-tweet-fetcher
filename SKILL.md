@@ -5,7 +5,9 @@ description: >
   Also supports Chinese platforms (Weibo, Bilibili, CSDN, WeChat).
   Includes camofox_search() for zero-cost Google search without API keys.
   Basic tweet fetching: zero dependencies. Replies/timelines/search: requires Camofox.
-  NEW: X-Tracker for tweet growth monitoring with burst detection.
+  Paper tools: find paper authors' X/Twitter accounts (ArXiv → GitHub → web search),
+  recommend related papers via OpenAlex (250M+ papers, free, no API key).
+  X-Tracker for tweet growth monitoring with burst detection.
 ---
 
 # X Tweet Fetcher
@@ -22,6 +24,8 @@ Fetch tweets from X/Twitter without authentication. Supports tweet content, repl
 | Chinese platforms | `fetch_china.py --url <url>` | **Camofox** (except WeChat) |
 | Google search | `camofox_search("query")` | **Camofox** |
 | **X-Tracker** (growth) | `tweet_growth_cli.py --add/--run/--report` | None (zero deps) |
+| **Paper → Author X** | `arxiv_author_finder.py --arxiv <id>` | None (zero deps) |
+| **Paper Recommend** | `paper_recommend.py --arxiv/--title/--github` | None (zero deps) |
 
 ---
 
@@ -219,6 +223,94 @@ for reply in result.get("replies", []):
 }
 ```
 
+## Paper Tools (Zero Dependencies)
+
+Find paper authors' X/Twitter accounts and discover related papers.
+
+### Find Author X/Twitter from a Paper
+
+```bash
+# From ArXiv ID
+python3 scripts/arxiv_author_finder.py --arxiv 2603.10165
+
+# From ArXiv URL
+python3 scripts/arxiv_author_finder.py --arxiv "https://arxiv.org/abs/1706.03762"
+
+# JSON output
+python3 scripts/arxiv_author_finder.py --arxiv 2603.10165 --json
+
+# With verbose progress
+python3 scripts/arxiv_author_finder.py --arxiv 2603.10165 -v
+```
+
+**Output:** Each author's X profile link (`https://x.com/handle`), source, and confidence level.
+
+**How it finds authors (4-layer cascade):**
+
+| Layer | Method | Confidence |
+|-------|--------|-----------|
+| GitHub repo | Paper's GitHub link → scrape contributor profiles | High |
+| GitHub user search | Search author name → check profile | Medium |
+| Scholars dataset | Offline academic Twitter dataset | High |
+| Web search | SearxNG/DuckDuckGo `"name" site:x.com` | Low |
+
+### Recommend Related Papers + Author Twitter
+
+```bash
+# From ArXiv paper
+python3 scripts/paper_recommend.py --arxiv 2603.10165
+
+# From paper title (works for non-ArXiv papers too)
+python3 scripts/paper_recommend.py --title "Attention Is All You Need"
+
+# From GitHub repo
+python3 scripts/paper_recommend.py --github https://github.com/org/repo
+
+# From a tweet that mentions a paper
+python3 scripts/paper_recommend.py --tweet https://x.com/user/status/123456
+
+# Chinese output
+python3 scripts/paper_recommend.py --arxiv 2603.10165 --zh
+
+# Top 10 recommendations, JSON output
+python3 scripts/paper_recommend.py --arxiv 2603.10165 --top 10 --json
+
+# Skip Twitter lookup (faster)
+python3 scripts/paper_recommend.py --arxiv 2603.10165 --skip-twitter
+```
+
+**What it recommends (via OpenAlex, 250M+ papers, free):**
+
+| Source | What |
+|--------|------|
+| cited_by | Papers that cite this one (follow-up work) |
+| reference | Papers this one cites (prior work) |
+| related | OpenAlex algorithm recommendations |
+| same_author | Top papers by the same authors |
+
+**Output:** Related papers ranked by citations, each with title, authors, year, ArXiv link, and author X/Twitter links.
+
+### From Agent Code
+
+```python
+# Find author Twitter
+from scripts.arxiv_author_finder import ArxivAuthorFinder
+finder = ArxivAuthorFinder()
+result = finder.find("2603.10165")
+for author, info in result["results"].items():
+    if info["handle"]:
+        print(f"{author}: https://x.com/{info['handle']}")
+
+# Recommend papers
+from scripts.paper_recommend import find_related_papers, fetch_arxiv_metadata
+paper = fetch_arxiv_metadata("2603.10165")
+recommendations = find_related_papers(paper, top_n=5)
+for p in recommendations:
+    print(f"{p['title']} ({p['citationCount']} citations)")
+```
+
+---
+
 ## File Structure
 
 ```
@@ -229,7 +321,11 @@ x-tweet-fetcher/
 │   ├── fetch_tweet.py          # Main fetcher (tweet + replies + timeline)
 │   ├── fetch_china.py          # Chinese platform fetcher
 │   ├── camofox_client.py       # Camofox REST API client + camofox_search()
-│   └── x-profile-analyzer.py   # User profile analysis (AI-powered)
+│   ├── x-profile-analyzer.py   # User profile analysis (AI-powered)
+│   ├── paper_recommend.py      # Paper recommendation + author Twitter
+│   ├── arxiv_author_finder.py  # ArXiv author → X/Twitter finder
+│   ├── common.py               # Shared utilities (HTTP, ArXiv, GitHub, search)
+│   └── config.py               # Environment variable configuration
 └── CHANGELOG.md
 ```
 

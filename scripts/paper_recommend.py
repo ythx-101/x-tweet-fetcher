@@ -390,7 +390,8 @@ def find_related_papers(paper_info: dict, top_n: int = 5) -> list[dict]:
             print(f"[WARN] OpenAlex match too different (sim={sim:.2f}), treating as not found", file=sys.stderr)
             oa_paper = None
     if not oa_paper:
-        print("[INFO] Paper not in OpenAlex, searching by title keywords...", file=sys.stderr)
+        print("[WARN] Paper not found on OpenAlex — it may be too new (indexing takes days to weeks).", file=sys.stderr)
+        print("[INFO] Falling back to keyword search for related papers...", file=sys.stderr)
         q = urllib.parse.quote(title[:200], safe='')
         data = _oa_get(f"{OPENALEX_API}/works?search={q}&per_page={top_n * 3}&sort=cited_by_count:desc")
         if data and data.get("results"):
@@ -680,9 +681,10 @@ Examples:
     # Step 3: Find author Twitter handles
     twitter_map: dict[str, str] = {}
     if not args.skip_twitter:
-        # 3a. Source paper authors — use ArxivAuthorFinder directly (no subprocess)
+        # 3a. Source paper authors
         arxiv_id = paper_info.get("arxiv_id")
         if arxiv_id:
+            # Has ArXiv ID — use full 4-layer finder
             print("[INFO] Looking up source paper author Twitter...", file=sys.stderr)
             try:
                 finder = ArxivAuthorFinder(skip_search=True)
@@ -694,6 +696,18 @@ Examples:
                         print(f"  [Twitter] {name} -> @{handle}", file=sys.stderr)
             except Exception as e:
                 print(f"[WARN] arxiv_author_finder failed: {e}", file=sys.stderr)
+        else:
+            # No ArXiv ID — fallback: use GitHub URLs + lightweight search
+            print("[INFO] No ArXiv ID, looking up author Twitter via GitHub...", file=sys.stderr)
+            authors = paper_info.get("authors", [])
+            github_urls = paper_info.get("github_urls", [])
+            for author in authors[:5]:
+                if author in twitter_map:
+                    continue
+                handle = find_author_twitter(author, github_urls)
+                if handle:
+                    twitter_map[author] = handle
+                    print(f"  [Twitter] {author} -> @{handle}", file=sys.stderr)
 
         # 3b. Recommended paper authors — full finder for top papers, lightweight for rest
         if recommendations:
