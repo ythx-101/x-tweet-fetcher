@@ -162,9 +162,11 @@ print(json.dumps(results, ensure_ascii=False))
             local_path = f.name
 
         remote_path = "/tmp/_sogou_search.py"
-        subprocess.run(["scp", "-o", "ConnectTimeout=5", "-q", local_path, f"{host}:{remote_path}"],
-                       capture_output=True, timeout=10)
-        os.unlink(local_path)
+        try:
+            subprocess.run(["scp", "-o", "ConnectTimeout=5", "-q", local_path, f"{host}:{remote_path}"],
+                           capture_output=True, timeout=10)
+        finally:
+            os.unlink(local_path)
 
         result = subprocess.run(
             ["ssh", "-o", "ConnectTimeout=5", host, "python3", remote_path],
