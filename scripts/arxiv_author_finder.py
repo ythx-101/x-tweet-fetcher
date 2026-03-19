@@ -158,10 +158,8 @@ def fetch_arxiv_paper(arxiv_id: str) -> dict:
         "arxiv": "http://arxiv.org/schemas/atom",
     }
     try:
-        # XXE protection: disable DTD and external entities
-        parser = ET.XMLParser()
-        parser.entity = {}
-        root = ET.fromstring(raw, parser=parser)
+        # CPython's expat-based parser does not fetch external entities by default
+        root = ET.fromstring(raw)
     except ET.ParseError as exc:
         raise RuntimeError(f"Malformed XML from arxiv API for {arxiv_id}: {exc}") from exc
     entry = root.find("atom:entry", ns)

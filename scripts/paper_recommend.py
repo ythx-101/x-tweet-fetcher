@@ -104,10 +104,8 @@ def fetch_arxiv_metadata(arxiv_id: str) -> dict | None:
 
     ns = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
     try:
-        # XXE protection: disable DTD and external entities
-        parser = ET.XMLParser()
-        parser.entity = {}
-        root = ET.fromstring(raw, parser=parser)
+        # CPython's expat-based parser does not fetch external entities by default
+        root = ET.fromstring(raw)
     except ET.ParseError:
         return None
     entry = root.find("atom:entry", ns)
