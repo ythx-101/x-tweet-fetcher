@@ -1,16 +1,32 @@
 ---
 name: x-tweet-fetcher
 description: >
-  Fetch tweets, replies, and user timelines from X/Twitter without login or API keys.
-  Also supports Chinese platforms (Weibo, Bilibili, CSDN, WeChat).
-  Includes camofox_search() for zero-cost Google search without API keys.
-  Basic tweet fetching: zero dependencies. Replies/timelines/search: requires Camofox.
-  NEW: X-Tracker for tweet growth monitoring with burst detection.
+  Fetch X/Twitter tweets, replies, timelines, and growth data without login or API keys.
+  China-platform fetching, profile analysis, and router/proxy integrations are optional extras.
+  Basic tweet fetching is zero dependency. Advanced browsing uses the browser backend.
 ---
 
 # X Tweet Fetcher
 
-Fetch tweets from X/Twitter without authentication. Supports tweet content, reply threads, user timelines, Chinese platforms, and tweet growth tracking.
+Fetch tweets from X/Twitter without authentication. The recommended default profile is X-only. China platforms, profile analysis, and router/proxy features should be enabled intentionally.
+
+## Recommended Default Profile
+
+For OpenClaw or other agent runtimes, the safest default profile is:
+
+- `scripts/fetch_tweet.py`
+- `scripts/nitter_client.py`
+- `scripts/playwright_client.py`
+- `scripts/tweet_growth.py`
+- `scripts/tweet_growth_cli.py`
+
+Optional extras that expand scope and should be reviewed before use:
+
+- `scripts/fetch_china.py`
+- `scripts/sogou_wechat.py`
+- `scripts/x-profile-analyzer.py`
+- `scripts/to_obsidian.py`
+- `scripts/paper_to_obsidian.py`
 
 ## Feature Overview
 

@@ -1282,10 +1282,20 @@ class XiaohongshuParser(PlatformParser):
 
     def _fetch_via_router(self, url: str) -> Optional[str]:
         """Fetch page HTML via router's home IP (bypasses geo-block)."""
-        import subprocess
         import shlex
-        cmd_queue = "/root/router-agent/cmd-queue"
-        cmd_output = "/root/router-agent/cmd-output"
+        import os
+
+        cmd_queue = os.environ.get("ROUTER_CMD_QUEUE", "").strip()
+        cmd_output = os.environ.get("ROUTER_CMD_OUTPUT", "").strip()
+
+        if not (cmd_queue and cmd_output):
+            print("[xiaohongshu] Router env vars not configured, skip router fetch", file=sys.stderr)
+            return None
+
+        for path_var in (cmd_queue, cmd_output):
+            if not os.path.isabs(path_var) or '..' in path_var:
+                print(f"[xiaohongshu] Invalid router path: {path_var}", file=sys.stderr)
+                return None
         
         # Write curl command to router queue
         curl_cmd = (

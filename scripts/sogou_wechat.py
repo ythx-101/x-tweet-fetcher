@@ -35,9 +35,13 @@ def sogou_wechat_search_via_router(keyword, max_results=10):
     Uses home IP — never gets banned by Sogou.
     """
     import time
-    queue_file = os.environ.get("ROUTER_CMD_QUEUE", "/root/router-agent/cmd-queue")
-    result_file = os.environ.get("ROUTER_CMD_RESULT", "/root/router-agent/cmd-result")
-    output_file = os.environ.get("ROUTER_CMD_OUTPUT", "/root/router-agent/cmd-output")
+    queue_file = os.environ.get("ROUTER_CMD_QUEUE", "").strip()
+    result_file = os.environ.get("ROUTER_CMD_RESULT", "").strip()
+    output_file = os.environ.get("ROUTER_CMD_OUTPUT", "").strip()
+
+    if not (queue_file and result_file and output_file):
+        print("Router env vars not configured, falling back to direct", file=sys.stderr)
+        return sogou_wechat_search(keyword, max_results)
 
     for path_var in (queue_file, result_file, output_file):
         if not os.path.isabs(path_var) or '..' in path_var:

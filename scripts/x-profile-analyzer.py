@@ -14,7 +14,7 @@ Usage:
     python3 x_profile_analyzer.py --user elonmusk --no-analyze --output-json data.json
 
 AI 配置（完整模式需要，三选一）：
-    export MINIMAX_API_KEY=xxx     # MiniMax（OpenClaw 用户自动读取，无需配置）
+    export MINIMAX_API_KEY=xxx     # MiniMax
     export OPENAI_API_KEY=xxx      # OpenAI / DeepSeek 等
     export OPENAI_BASE_URL=xxx     # 自定义接口（可选）
     export OPENAI_MODEL=xxx        # 模型名（可选，默认 gpt-4o-mini）
@@ -30,14 +30,12 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
-from pathlib import Path
 
 
 # ── 配置 ──────────────────────────────────────────────────────────────────────
 
 MINIMAX_API_URL = "https://api.minimax.io/anthropic/v1/messages"
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-AUTH_PROFILES_PATH = Path.home() / ".openclaw" / "agents" / "main" / "agent" / "auth-profiles.json"
 # REFERENCE_USER 已移除（v1.1）
 
 
@@ -48,29 +46,14 @@ def load_api_config() -> tuple:
     加载 AI API 配置，返回 (api_key, api_url, model_name, backend)
     优先级：
       1. MINIMAX_API_KEY 环境变量
-      2. OpenClaw auth-profiles.json（OpenClaw 用户自动读取）
-      3. OPENAI_API_KEY 环境变量（兼容任何 OpenAI 格式接口）
+      2. OPENAI_API_KEY 环境变量（兼容任何 OpenAI 格式接口）
     """
-    import os
-
     # 1. 环境变量 MINIMAX_API_KEY
     mm_key = os.environ.get("MINIMAX_API_KEY")
     if mm_key:
         return mm_key, MINIMAX_API_URL, "MiniMax-M2.5", "minimax"
 
-    # 2. OpenClaw auth-profiles.json
-    try:
-        with open(AUTH_PROFILES_PATH) as f:
-            data = json.load(f)
-        profiles = data.get("profiles", {})
-        mm = profiles.get("minimax:default", {})
-        key = mm.get("key", "")
-        if key:
-            return key, MINIMAX_API_URL, "MiniMax-M2.5", "minimax"
-    except Exception:
-        pass
-
-    # 3. OPENAI_API_KEY（兼容 OpenAI / DeepSeek / 任何兼容接口）
+    # 2. OPENAI_API_KEY（兼容 OpenAI / DeepSeek / 任何兼容接口）
     openai_key = os.environ.get("OPENAI_API_KEY")
     openai_url = os.environ.get("OPENAI_BASE_URL", OPENAI_API_URL)
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")

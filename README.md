@@ -2,7 +2,7 @@
 
 # 🦞 x-tweet-fetcher
 
-**Fetch tweets, lists, articles, and WeChat content — with smart backend routing.**
+**Fetch X/Twitter content first, with optional extras for lists, articles, and WeChat.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenClaw Skill](https://img.shields.io/badge/OpenClaw-Skill-blue.svg)](https://github.com/openclaw/openclaw)
@@ -29,6 +29,34 @@ You: ...seriously?
 X has no free API. Scraping gets you blocked. Browser automation is fragile and won't work in headless environments.
 
 **x-tweet-fetcher** solves this with **smart backend routing**: Nitter for zero-dependency speed, Playwright for full-feature coverage, auto fallback between them.
+
+## 🔒 Security Profiles
+
+This repo works best when split into a **safe default X-only profile** and optional extras.
+
+### Recommended default for OpenClaw / agent runtimes
+
+Use these files by default:
+
+- `scripts/fetch_tweet.py`
+- `scripts/nitter_client.py`
+- `scripts/playwright_client.py`
+- `scripts/tweet_growth.py`
+- `scripts/tweet_growth_cli.py`
+
+This keeps the default profile focused on X/Twitter fetch + monitoring, with no router queue, SSH, cookie import, or local auth-profile reads.
+
+### Optional extras, enable intentionally
+
+- `scripts/fetch_china.py`
+- `scripts/sogou_wechat.py`
+- `scripts/x-profile-analyzer.py`
+- `scripts/to_obsidian.py`
+- `scripts/paper_to_obsidian.py`
+
+These files are useful, but they expand scope into browser automation, LLM APIs, cookies, proxying, router integration, or local-note export.
+
+See also: [`docs/security-profiles.md`](docs/security-profiles.md)
 
 ## 🔀 Three Backends
 
@@ -96,7 +124,7 @@ python3 scripts/fetch_tweet.py --url https://x.com/elonmusk/status/123456789 --r
 # @mentions monitoring (cron-friendly)
 python3 scripts/fetch_tweet.py --monitor @yourusername
 
-# User profile analysis
+# User profile analysis (requires explicit API env vars)
 python3 scripts/x-profile-analyzer.py --user elonmusk --count 100
 ```
 
@@ -113,7 +141,7 @@ python3 scripts/fetch_tweet.py --article https://x.com/user/article/123 --backen
 python3 scripts/fetch_china.py --url "https://mp.weixin.qq.com/s/..."
 ```
 
-### WeChat search (always zero-dep)
+### WeChat search (always zero-dep, router path only via explicit env vars)
 
 ```bash
 python3 scripts/sogou_wechat.py --keyword "AI Agent" --limit 5 --json
@@ -217,6 +245,8 @@ python3 scripts/nitter_client.py --search "test"
 - **Bind to `127.0.0.1` only** — never expose to public internet
 - **Use a secondary X account** — session token gives full access
 - **Session tokens last ~1 year**
+- **Router queue integration is opt-in** — set `ROUTER_CMD_QUEUE`, `ROUTER_CMD_RESULT`, and `ROUTER_CMD_OUTPUT` explicitly if you use it
+- **AI profile analysis is env-only** — set `MINIMAX_API_KEY` or `OPENAI_API_KEY` explicitly
 
 ## 📐 How It Works
 
