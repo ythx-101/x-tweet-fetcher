@@ -31,6 +31,13 @@ from typing import List, Dict, Optional, Tuple
 
 NITTER_URL = os.environ.get("NITTER_URL", "http://127.0.0.1:8788").rstrip("/")
 
+_ANTIBOT_MARKERS = (
+    "Making sure you're not a bot!",
+    "Verifying your request",
+    "Anubis",
+    "Sorry this pages exist in order to keep the service usable for everyone.",
+)
+
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -62,13 +69,18 @@ def _fetch_html(url: str, timeout: int = 15) -> str:
         return ""
 
 
+def _looks_like_antibot_page(html: str) -> bool:
+    return bool(html) and any(marker in html for marker in _ANTIBOT_MARKERS)
+
+
 def check_nitter(url: str = NITTER_URL, timeout: int = 5) -> bool:
     """Return True if Nitter is reachable."""
     try:
         req = urllib.request.Request(url + "/", headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            resp.read(128)
-        return True
+            charset = resp.headers.get_content_charset() or "utf-8"
+            sample = resp.read(4096).decode(charset, errors="replace")
+        return not _looks_like_antibot_page(sample)
     except Exception:
         return False
 
@@ -492,6 +504,8 @@ def fetch_tweet_detail(username: str, tweet_id: str) -> Dict:
     html = _fetch_html(url)
     if not html:
         return {"error": f"Failed to fetch {url}"}
+    if _looks_like_antibot_page(html):
+        return {"error": f"Nitter anti-bot challenge blocked {url}"}
 
     # Split HTML into main tweet and replies sections
     main_html = ""

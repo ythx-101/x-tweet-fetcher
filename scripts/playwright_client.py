@@ -23,16 +23,55 @@ import os
 import sys
 import time
 import secrets
+import shutil
 import urllib.parse
 from typing import Optional, List, Dict, Any, Tuple
 
 # ---------------------------------------------------------------------------
 # Chromium executable path
 # ---------------------------------------------------------------------------
-_CHROMIUM_EXEC = os.environ.get(
-    "PLAYWRIGHT_CHROMIUM_EXEC",
-    "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome",
-)
+
+def _candidate_browser_paths() -> List[str]:
+    env_path = os.environ.get("PLAYWRIGHT_CHROMIUM_EXEC", "").strip()
+    candidates = [
+        env_path,
+        "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        shutil.which("google-chrome") or "",
+        shutil.which("chromium") or "",
+        shutil.which("chromium-browser") or "",
+    ]
+    # de-dupe while preserving order
+    seen = set()
+    result = []
+    for p in candidates:
+        if p and p not in seen:
+            seen.add(p)
+            result.append(p)
+    return result
+
+
+def _find_browser_executable() -> Optional[str]:
+    for path in _candidate_browser_paths():
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+_CHROMIUM_EXEC = _find_browser_executable()
+
+
+def _playwright_importable() -> bool:
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def _playwright_ready() -> bool:
+    return _playwright_importable() and (_CHROMIUM_EXEC is not None)
 
 # Default working Nitter instance (nitter.net is down; tiekoetter is live)
 # Nitter fallback chain: tested 2026-03-22, only these 3 are alive
@@ -55,10 +94,11 @@ _tab_store: dict = {}   # tab_id → page text
 
 def _launch_browser():
     """Return a (playwright, browser) pair.  Caller must close both."""
+    if not _playwright_importable():
+        raise RuntimeError("playwright Python package is not installed")
     from playwright.sync_api import sync_playwright  # lazy import
     pw = sync_playwright().start()
-    browser = pw.chromium.launch(
-        executable_path=_CHROMIUM_EXEC,
+    launch_kwargs = dict(
         headless=True,
         args=[
             "--no-sandbox",
@@ -68,6 +108,9 @@ def _launch_browser():
             "--disable-blink-features=AutomationControlled",
         ],
     )
+    if _CHROMIUM_EXEC:
+        launch_kwargs["executable_path"] = _CHROMIUM_EXEC
+    browser = pw.chromium.launch(**launch_kwargs)
     return pw, browser
 
 
@@ -478,8 +521,8 @@ def playwright_fetch_nitter_user_info(
 # ---------------------------------------------------------------------------
 
 def check_camofox(port: int = 9377) -> bool:
-    """Always returns True – Playwright needs no separate server."""
-    return True
+    """Return True when Playwright and a browser executable are available."""
+    return _playwright_ready()
 
 
 def camofox_open_tab(url: str, session_key: str, port: int = 9377) -> Optional[str]:

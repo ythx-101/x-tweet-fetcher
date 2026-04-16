@@ -56,6 +56,7 @@ _MESSAGES = {
             "参考: https://github.com/openclaw/camofox"
         ),
         "err_snapshot_failed": "无法从 Camofox 获取页面快照",
+        "err_antibot_challenge": "Nitter 反爬挑战拦截了请求。请更换实例，或使用本地/自建 Nitter。",
         "err_mutually_exclusive": "错误：--user、--url、--article、--monitor 和 --list 不能同时使用",
         "err_no_input": "错误：请提供 --url 或 --user",
         "err_prefix": "错误：",
@@ -128,6 +129,7 @@ _MESSAGES = {
             "See: https://github.com/openclaw/camofox"
         ),
         "err_snapshot_failed": "Failed to get page snapshot from Camofox",
+        "err_antibot_challenge": "Nitter anti-bot challenge blocked the request. Try another instance or a local/self-hosted Nitter.",
         "err_mutually_exclusive": "Error: --user, --url, --article, --monitor, and --list are mutually exclusive",
         "err_no_input": "Error: provide --url or --user",
         "err_prefix": "Error: ",
@@ -264,6 +266,18 @@ def camofox_fetch_page(url: str, session_key: str, wait: float = 8, port: int = 
     snapshot = camofox_snapshot(tab_id, port)
     camofox_close_tab(tab_id, port)
     return snapshot
+
+
+def _looks_like_antibot_snapshot(snapshot: str) -> bool:
+    if not snapshot:
+        return False
+    markers = (
+        "Making sure you're not a bot!",
+        "Verifying your request",
+        "Anubis",
+        "Sorry this pages exist in order to keep the service usable for everyone.",
+    )
+    return any(marker in snapshot for marker in markers)
 
 
 # --- Browser backend priority: playwright > camofox ---
@@ -1355,6 +1369,9 @@ def fetch_tweet_replies(
 
     if not snapshot:
         result["error"] = t("err_snapshot_failed")
+        return result
+    if _looks_like_antibot_snapshot(snapshot):
+        result["error"] = t("err_antibot_challenge")
         return result
 
     replies = parse_replies_snapshot(snapshot, original_author=username)
