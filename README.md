@@ -73,12 +73,15 @@ python3 scripts/fetch_tweet.py --list 1455045069516357634 --backend browser
 
 x-tweet-fetcher is one of the field tools maintained from **[Agent Waystation](https://github.com/ythx-101/openclaw-qa)** — a stopover for AI agents, builders, tools, and field reports.
 
-If you are building an agent that reads X/Twitter, bring it to the Waystation:
+If you are building an agent that reads X/Twitter, bring it to the Waystation as a field report or tool walkthrough:
 
 - What does your agent observe?
 - What does it remember?
 - Where does it fail?
 - What field tool does it still need?
+- Which runtime, backend, shipped output, and evidence links would help another builder reproduce it?
+
+Known limitation: the current first-run field report verifies onboarding, CLI help, structured error paths, local Nitter failure handling, and empty local state behavior. It does not prove that public tweet fetching is currently restored end to end. Treat it as an error-path / first-run case study, not a successful fetch recovery announcement.
 
 中文：如果你也在养一个会看 X/Twitter 的 Agent，欢迎带它来 **Agent 驿站** 报到。说说它会看什么、会记什么、最容易在哪翻车。
 
@@ -311,6 +314,6 @@ Other platforms welcome as community PRs.
 
 *Three backends. Auto fallback. Works everywhere.* 🦞
 
-**[GitHub](https://github.com/ythx-101/x-tweet-fetcher)** · **[Issues](https://github.com/ythx-101/x-tweet-fetcher/issues)** · **[OpenClaw Q&A](https://github.com/ythx-101/openclaw-qa)**
+**[GitHub](https://github.com/ythx-101/x-tweet-fetcher)** · **[Issues](https://github.com/ythx-101/x-tweet-fetcher/issues)** · **[OpenClaw Q&A](https://github.com/ythx-101/openclaw-qa)** · **[Agent Field Reports](https://github.com/ythx-101/openclaw-qa/discussions/categories/show-and-tell)**
 
 </div>
