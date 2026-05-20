@@ -201,7 +201,7 @@ Use a **secondary account** (not your main).
 3. Create `sessions.jsonl`:
 
 ```json
-{"name":"myaccount","auth_token":"YOUR_AUTH_TOKEN","ct0":"YOUR_CT0"}
+{"kind":"cookie","username":"myaccount","authToken":"YOUR_AUTH_TOKEN","ct0":"YOUR_CT0"}
 ```
 
 #### 4. Configure

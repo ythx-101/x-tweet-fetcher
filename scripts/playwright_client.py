@@ -29,10 +29,23 @@ from typing import Optional, List, Dict, Any, Tuple
 # ---------------------------------------------------------------------------
 # Chromium executable path
 # ---------------------------------------------------------------------------
-_CHROMIUM_EXEC = os.environ.get(
-    "PLAYWRIGHT_CHROMIUM_EXEC",
-    "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome",
-)
+_CHROMIUM_EXEC_ENV = "PLAYWRIGHT_CHROMIUM_EXEC"
+
+
+def _resolve_chromium_executable(browser_type) -> Optional[str]:
+    """Return a Chromium executable path, preferring a valid env override."""
+    env_path = os.environ.get(_CHROMIUM_EXEC_ENV)
+    if env_path:
+        if os.path.exists(env_path):
+            return env_path
+        print(
+            f"[playwright_client] {_CHROMIUM_EXEC_ENV} does not exist: {env_path}; "
+            "using Playwright bundled Chromium",
+            file=sys.stderr,
+        )
+
+    executable_path = getattr(browser_type, "executable_path", None)
+    return executable_path if executable_path and os.path.exists(executable_path) else None
 
 # Default working Nitter instance (nitter.net is down; tiekoetter is live)
 # Nitter fallback chain: tested 2026-03-22, only these 3 are alive
@@ -57,17 +70,20 @@ def _launch_browser():
     """Return a (playwright, browser) pair.  Caller must close both."""
     from playwright.sync_api import sync_playwright  # lazy import
     pw = sync_playwright().start()
-    browser = pw.chromium.launch(
-        executable_path=_CHROMIUM_EXEC,
-        headless=True,
-        args=[
+    launch_options = {
+        "headless": True,
+        "args": [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
             "--disable-blink-features=AutomationControlled",
         ],
-    )
+    }
+    executable_path = _resolve_chromium_executable(pw.chromium)
+    if executable_path:
+        launch_options["executable_path"] = executable_path
+    browser = pw.chromium.launch(**launch_options)
     return pw, browser
 
 
