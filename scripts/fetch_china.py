@@ -343,7 +343,7 @@ class WeiboParser(PlatformParser):
                     try:
                         current_article["shares"] = parse_wan_number(nums[0])
                         current_article["comments"] = parse_wan_number(nums[1])
-                    except:
+                    except Exception:
                         pass
 
             # Likes: "    - button \"1793\" [eN]:"

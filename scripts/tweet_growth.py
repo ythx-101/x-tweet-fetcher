@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
+from typing import Optional
+
 from growth_config import (
     DATA_FILE, DISCOVER_CACHE,
     NEW_TWEET_HOURS, FAST_INTERVAL_MIN, NORM_INTERVAL_MIN,
@@ -78,7 +80,7 @@ def save_data(data: dict):
 
 # ─── FxTwitter 抓取 ────────────────────────────────────────────────────────────
 
-def fetch_tweet_stats(tweet_id: str, retries: int = 2) -> dict | None:
+def fetch_tweet_stats(tweet_id: str, retries: int = 2) -> Optional[dict]:
     url = FXTWITTER_API.format(tweet_id=tweet_id)
     req = urllib.request.Request(url, headers={"User-Agent": "tweet-growth/2.1"})
     for attempt in range(retries + 1):
@@ -371,7 +373,7 @@ def _extract_keywords(record: dict) -> list[str]:
 
 # ─── 功能5：传播模式判断 ──────────────────────────────────────────────────────
 
-def analyze_propagation(history: list[dict], burst: dict | None = None) -> dict:
+def analyze_propagation(history: list[dict], burst: Optional[dict] = None) -> dict:
     """
     通过 RT/浏览比的变化，判断推文是怎么火的。
     返回：{
