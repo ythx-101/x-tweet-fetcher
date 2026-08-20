@@ -82,6 +82,18 @@ def test_archive_skips_records_without_id_or_text(tmp_path):
     assert report["inserted_ids"] == ["1"]
 
 
+def test_archive_skips_malformed_serialized_list_fields(tmp_path):
+    db = tmp_path / "ledger.db"
+    report = archive_tweets(db, [
+        _tweet_dict("1", "ok", urls_json='["https://t.co/a"]'),
+        _tweet_dict("2", "bad", media_json="{not-json"),
+    ])
+    assert report["inserted"] == 1
+    assert report["skipped"] == 1
+    row = query_ledger(db)[0]
+    assert json.loads(row["urls_json"]) == ["https://t.co/a"]
+
+
 def test_archive_is_idempotent_with_existing_db(tmp_path):
     db = tmp_path / "ledger.db"
     archive_tweets(db, [_tweet_dict("1", "x"), _tweet_dict("2", "y")])
@@ -124,6 +136,49 @@ def test_normalize_accepts_raw_backend_keys():
     assert row[0] == "7" and row[1] == "2026-01-01T00:00:00Z"
     assert row[3] == "zh" and row[6] == "6" and row[7] == "5" and row[8] == "4"
     assert json.loads(row[9]) == ["https://t.co/a"]
+
+
+def test_normalize_accepts_serialized_json_fields_without_double_encoding():
+    row = normalize(
+        {
+            "tweet_id": "9",
+            "text": "serialized fields",
+            "urls_json": json.dumps(["https://t.co/a"]),
+            "media_json": json.dumps([{"url": "https://pbs.twimg.com/a.jpg"}]),
+        },
+        "legacy-db",
+        "2026-08-09T00:00:00+00:00",
+    )
+    urls = json.loads(row[9])
+    media = json.loads(row[10])
+    assert urls == ["https://t.co/a"]
+    assert media == [{"url": "https://pbs.twimg.com/a.jpg"}]
+    assert not isinstance(urls, str)
+    assert not isinstance(media, str)
+
+
+def test_normalize_wraps_native_scalar_url_as_a_list():
+    row = normalize(
+        {"tweet_id": "10", "text": "single URL", "urls": "https://x.com/a"},
+        "backend",
+        "2026-08-09T00:00:00+00:00",
+    )
+    assert json.loads(row[9]) == ["https://x.com/a"]
+
+
+def test_normalize_rejects_malformed_serialized_json_fields():
+    with pytest.raises(ValueError, match="urls_json"):
+        normalize(
+            {"tweet_id": "11", "text": "bad urls", "urls_json": "not-json"},
+            "legacy-db",
+            "2026-08-09T00:00:00+00:00",
+        )
+    with pytest.raises(ValueError, match="media_json"):
+        normalize(
+            {"tweet_id": "12", "text": "bad media", "media_json": '{"url":"x"}'},
+            "legacy-db",
+            "2026-08-09T00:00:00+00:00",
+        )
 
 
 def test_normalize_ignores_relative_time_keys():
