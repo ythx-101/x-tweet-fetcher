@@ -130,7 +130,11 @@ def _normalize_list_field(
     return value
 
 
-def normalize(record: Dict[str, Any], source: str, imported_at: str) -> Tuple[str, ...]:
+def normalize(
+    record: Dict[str, Any],
+    source: str,
+    imported_at: str,
+) -> Tuple[str, ...]:
     """Map a tweet dict (xtf ``to_dict()`` or a raw backend row) to a ledger row.
 
     Raises ValueError when the record has no usable tweet id or text, or when a
