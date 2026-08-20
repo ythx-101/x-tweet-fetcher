@@ -93,10 +93,48 @@ def _extract_urls(text: str) -> List[str]:
     return list(dict.fromkeys(_URL_RE.findall(text)))
 
 
+def _normalize_list_field(
+    record: Dict[str, Any],
+    field: str,
+    serialized_field: str,
+    fallback: List[Any],
+) -> List[Any]:
+    """Return a JSON-array-compatible list from a native or serialized field.
+
+    Native fields may be lists, tuples, or one scalar string. Serialized
+    ``*_json`` fields must decode to a JSON array. Invalid shapes raise
+    ``ValueError`` so ``archive_tweets`` skips the malformed record instead of
+    storing a double-encoded string that downstream readers cannot consume.
+    """
+    value = record.get(field)
+    serialized = False
+    if value in (None, "", []):
+        value = record.get(serialized_field)
+        serialized = value not in (None, "", [])
+    if value in (None, "", []):
+        return list(fallback)
+
+    if serialized and isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{serialized_field} must contain a valid JSON array") from exc
+    elif isinstance(value, str):
+        value = [value]
+
+    if isinstance(value, tuple):
+        value = list(value)
+    if not isinstance(value, list):
+        source_name = serialized_field if serialized else field
+        raise ValueError(f"{source_name} must be a list or JSON array")
+    return value
+
+
 def normalize(record: Dict[str, Any], source: str, imported_at: str) -> Tuple[str, ...]:
     """Map a tweet dict (xtf ``to_dict()`` or a raw backend row) to a ledger row.
 
-    Raises ValueError when the record has no usable tweet id or text.
+    Raises ValueError when the record has no usable tweet id or text, or when a
+    serialized list field is malformed.
     """
     tweet_id = _first(record, *_ID_KEYS)
     text = _first(record, *_TEXT_KEYS)
@@ -116,11 +154,8 @@ def normalize(record: Dict[str, Any], source: str, imported_at: str) -> Tuple[st
         elif quoted is not None and hasattr(quoted, "to_dict"):
             quoted_id = quoted.to_dict().get("tweet_id") or None
 
-    urls = record.get("urls") or record.get("urls_json")
-    if urls is None:
-        urls = _extract_urls(text)
-
-    media = record.get("media") or record.get("media_json") or []
+    urls = _normalize_list_field(record, "urls", "urls_json", _extract_urls(text))
+    media = _normalize_list_field(record, "media", "media_json", [])
 
     return (
         tweet_id,
