@@ -99,6 +99,26 @@ class NitterBackend(Backend):
             page += 1
         return [Tweet.from_nitter_entry(tw) for tw in tweets_raw]
 
+    def fetch_list(self, list_id: str, limit: int = 20) -> list[Tweet]:
+        """List timeline over plain HTTP (/i/lists/ID), paginated by cursor."""
+        tweets_raw: list[dict] = []
+        cursor: str | None = None
+        page = 1
+        while len(tweets_raw) < limit and page <= _MAX_PAGES:
+            path = f"/i/lists/{list_id}"
+            if cursor:
+                path += "?" + urllib.parse.urlencode({"cursor": cursor})
+            html = self._get_html(path)
+            page_tweets = _extract_tweets_from_events(_parse_html(html).events)
+            if not page_tweets:
+                break
+            tweets_raw.extend(page_tweets[: limit - len(tweets_raw)])
+            cursor = _extract_next_cursor(html)
+            if not cursor:
+                break
+            page += 1
+        return [Tweet.from_nitter_entry(tw) for tw in tweets_raw]
+
     def fetch_timeline(self, username: str, limit: int = 20) -> list[Tweet]:
         # Direct /{username} route 404s on session-auth Nitter; search works.
         return self.search(f"from:{username}", limit=limit)
@@ -120,6 +140,8 @@ class NitterBackend(Backend):
                     views=r.get("views", 0),
                     tweet_id=str(r.get("tweet_id", "") or ""),
                     media=list(r.get("media_urls", []) or []),
+                    links=list(r.get("links", []) or []),
+                    is_author_thread=bool(r.get("is_author_thread", False)),
                 )
             )
         return replies

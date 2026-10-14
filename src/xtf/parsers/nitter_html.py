@@ -108,6 +108,7 @@ def _extract_tweets_from_events(events: list[tuple], base_url: str = "") -> list
         stats_context = None  # "replies" | "retweets" | "likes" | "views"
         replies = retweets = likes = views = 0
         media_urls = []
+        links: list[str] = []
 
         # Walk forward to collect this timeline-item's content.
         # We track depth to know when the div closes.
@@ -177,14 +178,28 @@ def _extract_tweets_from_events(events: list[tuple], base_url: str = "") -> list
                     text_parts = []
                     tc_depth = 1
                     j += 1
+                    cur_href = ""
                     while j < n and tc_depth > 0:
                         tev = events[j]
                         if tev[0] == "open" and tev[1] in ("div", "p", "span"):
                             tc_depth += 1
                         elif tev[0] == "close" and tev[1] in ("div", "p", "span"):
                             tc_depth -= 1
+                        elif tev[0] == "open" and tev[1] == "a":
+                            href = (tev[2].get("href") or "").strip()
+                            # External links only; skip /user, /search?q=#tag
+                            cur_href = href if href.startswith(("http://", "https://")) else ""
+                            if cur_href and cur_href not in links:
+                                links.append(cur_href)
+                        elif tev[0] == "close" and tev[1] == "a":
+                            cur_href = ""
                         elif tev[0] == "text" and tc_depth > 0:
-                            text_parts.append(tev[1])
+                            txt = tev[1]
+                            # Nitter shortens link text ("drive.google.com/file/d/1Twv…");
+                            # put the real URL back so the text is usable.
+                            if cur_href and txt.strip().endswith("…"):
+                                txt = cur_href
+                            text_parts.append(txt)
                         j += 1
                     tweet_text = " ".join(text_parts).strip()
                     depth -= 1  # div was already counted above
@@ -272,6 +287,7 @@ def _extract_tweets_from_events(events: list[tuple], base_url: str = "") -> list
             "views": views,
             "has_media": bool(media_urls),
             "media_urls": media_urls,
+            "links": links,
             "url": f"https://x.com/{tweet_url.rstrip('#m')}",
             "tweet_id": tweet_id,
         }
@@ -350,11 +366,23 @@ def parse_tweet_detail_html(html: str, username: str, tweet_id: str) -> dict:
     if not r_start:
         r_start = re.search(r'<div[^>]+class="replies"[^>]*id="r"', html)
 
-    if m_start and r_start:
-        main_html = html[m_start.start():r_start.start()]
-        replies_html = html[r_start.start():]
-    elif m_start:
-        main_html = html[m_start.start():]
+    # Author self-replies (a thread continuation, e.g. "link in the reply")
+    # render in <div class="after-tweet ..."> between the main tweet and the
+    # replies section, not inside #r. Capture them separately.
+    a_start = re.search(r'<div[^>]+class="after-tweet[^"]*"', html)
+    if a_start and m_start and a_start.start() < m_start.start():
+        a_start = None
+    if a_start and r_start and a_start.start() > r_start.start():
+        a_start = None
+
+    after_html = ""
+    if m_start:
+        main_end = a_start.start() if a_start else (r_start.start() if r_start else len(html))
+        main_html = html[m_start.start():main_end]
+        if a_start:
+            after_html = html[a_start.start():(r_start.start() if r_start else len(html))]
+        if r_start:
+            replies_html = html[r_start.start():]
     else:
         main_html = html
 
@@ -384,8 +412,12 @@ def parse_tweet_detail_html(html: str, username: str, tweet_id: str) -> dict:
             main_tweet["text"] = og_text
 
     replies: list[dict] = []
+    if after_html:
+        for tw in _extract_tweets_from_events(_parse_html(after_html).events):
+            tw["is_author_thread"] = True
+            replies.append(tw)
     if replies_html:
-        replies = _extract_tweets_from_events(_parse_html(replies_html).events)
+        replies.extend(_extract_tweets_from_events(_parse_html(replies_html).events))
 
     main_tweet["replies_list"] = replies
     return main_tweet
