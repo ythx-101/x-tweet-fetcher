@@ -105,7 +105,7 @@ class Router:
     def fetch_list(self, list_id: str, limit: int = 20):
         return self._run("fetch_list",
                          lambda b: b.fetch_list(list_id, limit=limit),
-                         chain=[self.browser])
+                         chain=[self.nitter, self.browser])
 
     def fetch_article(self, article_id: str):
         return self._run("fetch_article",
