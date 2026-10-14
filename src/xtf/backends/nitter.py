@@ -120,6 +120,8 @@ class NitterBackend(Backend):
                     views=r.get("views", 0),
                     tweet_id=str(r.get("tweet_id", "") or ""),
                     media=list(r.get("media_urls", []) or []),
+                    links=list(r.get("links", []) or []),
+                    is_author_thread=bool(r.get("is_author_thread", False)),
                 )
             )
         return replies

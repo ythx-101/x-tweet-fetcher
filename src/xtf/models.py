@@ -110,6 +110,7 @@ class Reply:
     media: list[str] = field(default_factory=list)
     links: list[str] = field(default_factory=list)
     thread_replies: list[dict[str, Any]] = field(default_factory=list)
+    is_author_thread: bool = False
 
     @classmethod
     def from_snapshot_entry(cls, d: dict[str, Any]) -> Reply:
@@ -148,6 +149,8 @@ class Reply:
             d["links"] = self.links
         if self.thread_replies:
             d["thread_replies"] = self.thread_replies
+        if self.is_author_thread:
+            d["is_author_thread"] = True
         return d
 
 
