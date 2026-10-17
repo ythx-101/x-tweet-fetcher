@@ -51,6 +51,8 @@ xtf --user elonmusk --text-only
 
 Prefer not to install? `python3 scripts/fetch_tweet.py --url ...` works straight from the clone (same flags).
 
+To check a fetched tweet's claims or linked sources, see the optional [tweet context workflow with Parallel Search MCP](docs/tweet-context.md).
+
 ## 🔀 Three Backends
 
 | Backend | Deps | Speed | Covers |
