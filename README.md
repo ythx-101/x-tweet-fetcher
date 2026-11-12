@@ -10,9 +10,17 @@
 
 *Three backends · Auto fallback · Unified JSON schema · Built for AI agents*
 
-[Quick Start](#-quick-start) · [Backends](#-three-backends) · [Capabilities](#-capabilities) · [Python API](#-python-api) · [Self-hosted Nitter](#-self-hosted-nitter) · [Migrating from v1](#-migrating-from-v1)
+[Quick Start](#-quick-start) · [Backends](#-three-backends) · [Capabilities](#-capabilities) · [When to use](#-when-to-use--alternatives) · [FAQ](#-faq) · [Python API](#-python-api) · [Self-hosted Nitter](#-self-hosted-nitter) · [Migrating from v1](#-migrating-from-v1)
 
 </div>
+
+---
+
+**x-tweet-fetcher (`xtf`) is a Python CLI and library that lets AI agents and developers fetch X/Twitter tweets, replies, timelines, search results, Lists and X Articles without logging in or using the X API — it routes between FxTwitter, Nitter and a browser driver with automatic fallback and returns one unified JSON schema.**
+
+### 中文简介
+
+免登录、免 API key 抓取 X（推特）的推文、回复、时间线、搜索、Lists 和长文（X Articles）。适合给 AI agent（OpenClaw、Claude Code 等能跑命令行的 agent）当“读推特”的工具，无需 API，输出统一 JSON，并可存入本地 SQLite 推文库。单条推文零依赖；时间线/搜索需要 Nitter；Lists 可走 Nitter 或浏览器；X Article 需要浏览器。
 
 ---
 
@@ -35,6 +43,9 @@ X has no free API. Scraping gets you blocked. Browser automation is fragile in h
 git clone https://github.com/ythx-101/x-tweet-fetcher
 cd x-tweet-fetcher && pip install .
 
+# Or in one step (not published on PyPI):
+pip install git+https://github.com/ythx-101/x-tweet-fetcher
+
 # Single tweet — works instantly, zero configuration
 xtf --url https://x.com/user/status/1234567890
 
@@ -56,14 +67,14 @@ Prefer not to install? `python3 scripts/fetch_tweet.py --url ...` works straight
 | Backend | Deps | Speed | Covers |
 |---------|------|-------|--------|
 | **fxtwitter** | None (stdlib) | ⚡⚡ | Single tweets, user profiles |
-| **nitter** | A Nitter instance | ⚡ | Timeline, search, replies, mentions |
-| **browser** | Camofox *or* Playwright | 🐢 | Everything above + **Lists** + **X Articles** |
+| **nitter** | A Nitter instance | ⚡ | Timeline, search, replies, mentions, **Lists** |
+| **browser** | Camofox *or* Playwright | 🐢 | Everything above + **X Articles** (also the Lists fallback) |
 | **auto** (default) | Best available | ⚡→🐢 | Nitter first, browser fallback |
 
 ```bash
 xtf --user elonmusk                    # auto (default)
 xtf --user elonmusk --backend nitter   # direct HTTP only
-xtf --list 1455045069516357634         # lists always use the browser
+xtf --list 1455045069516357634         # Lists: Nitter first, browser fallback
 ```
 
 **Browser driver** defaults to Camofox (`localhost:9377`). Playwright users:
@@ -82,7 +93,7 @@ export XTF_BROWSER=playwright          # or: --browser-driver playwright
 | User timeline (paginated) | `--user` | nitter / browser |
 | Search | `--search` | nitter |
 | User profile | `--user-info` | fxtwitter → nitter |
-| X List tweets | `--list` | browser |
+| X List tweets | `--list` | nitter / browser |
 | X Article full text | `--article` | browser |
 | Mentions monitor (incremental, cron-friendly) | `--monitor` | nitter / browser |
 | Archive fetch results (dedupe, SQLite) | `--ledger <db>` | any |
@@ -91,6 +102,25 @@ export XTF_BROWSER=playwright          # or: --browser-driver playwright
 **Exit codes** (cron-friendly): `0` success / no new mentions · `1` error / new mentions found · `2` monitor setup error.
 
 **Errors are machine-readable.** Every failure carries `error` (human message) plus `error_code` — one of `invalid_input`, `not_found`, `rate_limited`, `upstream_down`, `backend_unavailable`, `all_backends_failed` — so agents can branch on it. `all_backends_failed` additionally includes per-backend `error_causes`.
+
+## 🧭 When to use / Alternatives
+
+| Approach | Login / keys | Good for | Trade-off |
+|---|---|---|---|
+| Official X API | Developer account + API keys | Production, write access, guaranteed terms | Account setup, paid access tiers |
+| Account-based scrapers | Requires X accounts / cookies | Large-scale collection | Account ban risk, credential handling |
+| **x-tweet-fetcher** | None for single tweets; your own Nitter / browser for the rest | AI agents reading tweets on demand, small archives | Depends on FxTwitter / Nitter / page structure; read-only |
+
+**Use it when…**
+
+- an AI agent or script needs to read a tweet, thread, timeline or List on demand, without handling X credentials;
+- you want one JSON shape no matter which backend answered;
+- you want a small local archive of what you fetched (`--ledger`).
+
+**Don't use it when…**
+
+- you need to post or do anything other than read — xtf is read-only;
+- you need contractual guarantees or official support for production workloads — use the official X API.
 
 ## 📚 推文库 (Ledger)
 
@@ -149,10 +179,16 @@ Everything is an environment variable (CLI flags override):
 
 Public Nitter instances are unreliable and frequently dead. **Self-hosting is strongly recommended** for timeline/search/replies:
 
+Running your own instance needs two things: a `nitter.conf` (copy the official `nitter.example.conf` and edit it) and a separately running Redis/Valkey. Follow the official guide, including the docker-compose option: <https://github.com/zedeus/nitter#docker>. The official single-container example is:
+
 ```bash
-# See https://github.com/zedeus/nitter for full setup
-docker run -d -p 8788:8080 --name nitter zedeus/nitter:latest
-export XTF_NITTER=http://127.0.0.1:8788
+docker run -v $(pwd)/nitter.conf:/src/nitter.conf -d --network host zedeus/nitter:latest
+```
+
+Start Redis first, and set the port in `nitter.conf` to the one you want. Then point xtf at it:
+
+```bash
+export XTF_NITTER=http://127.0.0.1:<port>
 ```
 
 Multiple instances failover automatically:
@@ -180,6 +216,32 @@ scripts/fetch_tweet.py   # v1-compatible entry point (thin shim)
 tests/fixtures/          # captured page structures — regression protection
 ```
 
+## ❓ FAQ
+
+**Do I need an X/Twitter API key or account? / 需要 API key 或登录吗？**
+No. Single tweets go through FxTwitter with no setup. Full X Article text needs a browser that is already logged in to X; otherwise you get the title plus the public preview (`is_partial: true`).
+
+**Why does `--user` / `--search` fail with `all_backends_failed`?**
+No Nitter instance was reachable. Set `XTF_NITTER` to a working instance and check `error_causes` in the output for each backend's reason.
+
+**Can I use public Nitter instances?**
+Yes — `XTF_NITTER` accepts several comma-separated instances and fails over between them. Public instances are often unreliable, so [self-hosting](#-self-hosted-nitter) is recommended.
+
+**How do I use it from an AI agent (OpenClaw, Claude Code, others)?**
+Have the agent run `xtf ...`, parse the JSON, and branch on `error_code`. The repo ships a [SKILL.md](SKILL.md) describing the commands.
+
+**Can it fetch X Lists and X Articles?**
+Lists: Nitter first, browser fallback. Articles: browser only (Camofox or Playwright).
+
+**How do I keep a local archive? / 怎么存档？**
+Add `--ledger <db>` to any fetch; query it offline with `--ledger <db> --query <term>` or `--stats`.
+
+**Is it on PyPI?**
+Not currently. Install from source: `pip install git+https://github.com/ythx-101/x-tweet-fetcher`.
+
+**Does it post or write to X?**
+No, it is read-only.
+
 ## 🔄 Migrating from v1
 
 `python3 scripts/fetch_tweet.py` still works with all v1 flags and exit codes, and JSON fields are unchanged for every mode **except `--search`**, whose per-tweet schema is now unified with `--user` (fields renamed, `url`/`has_media`/`media_urls` dropped). See [MIGRATION.md](MIGRATION.md) for the full list, including where the analytics/China/Obsidian scripts went (spoiler: their own repos — this project is now purely about fetching tweets; the old world lives at the `v1-legacy` tag).
@@ -198,7 +260,7 @@ When Nitter or X change their page structure, capture a fresh snapshot into `tes
 
 - **[Nitter](https://github.com/zedeus/nitter)** by [zedeus](https://github.com/zedeus) — self-hosted Twitter frontend
 - **[FxTwitter](https://github.com/FxEmbed/FxEmbed)** — public API for single tweet data
-- **[Camofox](https://github.com/openclaw/camofox)** — anti-fingerprint browser, default browser driver
+- **[Camofox (camofox-browser)](https://github.com/jo-inc/camofox-browser)** — anti-fingerprint browser, default browser driver
 - **[Playwright](https://github.com/microsoft/playwright)** — alternative browser automation driver
 - **[OpenClaw](https://github.com/openclaw/openclaw)** — AI agent framework this tool grew up in
 

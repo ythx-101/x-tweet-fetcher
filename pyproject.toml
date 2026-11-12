@@ -9,9 +9,17 @@ description = "Fetch X/Twitter tweets, replies, timelines, and articles without 
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-keywords = ["twitter", "x", "nitter", "scraper", "ai-agents"]
+keywords = ["twitter", "x", "tweets", "twitter-scraper", "nitter", "fxtwitter", "no-api-key", "no-login", "ai-agents", "llm-tools", "cli", "sqlite"]
 classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Topic :: Internet :: WWW/HTTP",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
 dependencies = []  # stdlib only; browser mode optionally uses Camofox or Playwright
@@ -25,6 +33,9 @@ xtf = "xtf.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ythx-101/x-tweet-fetcher"
+Repository = "https://github.com/ythx-101/x-tweet-fetcher"
+Issues = "https://github.com/ythx-101/x-tweet-fetcher/issues"
+Changelog = "https://github.com/ythx-101/x-tweet-fetcher/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -18,7 +18,7 @@ from pathlib import Path
 
 DEFAULT_NITTER = "http://127.0.0.1:8788"
 DEFAULT_BROWSER_PORT = 9377
-USER_AGENT = "x-tweet-fetcher/3.0"
+USER_AGENT = "x-tweet-fetcher/3.1.0"
 
 # Retry / backoff for upstream HTTP calls
 RETRY_ATTEMPTS = 2          # retries after the first attempt

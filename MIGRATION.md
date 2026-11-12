@@ -6,7 +6,7 @@ If you call `python3 scripts/fetch_tweet.py ...` today, the flags and exit codes
 
 ## What's new
 
-- **`pip install x-tweet-fetcher`** — installs an `xtf` command and an importable `xtf` Python package (`from xtf import Router`).
+- **`pip install .`** from a clone (or `pip install git+https://github.com/ythx-101/x-tweet-fetcher`) — installs an `xtf` command and an importable `xtf` Python package (`from xtf import Router`).
 - **Unified schema** — all backends produce the same `Tweet`/`Reply`/`Profile`/`Article` shapes.
 - **Multi-instance Nitter** — `XTF_NITTER=url1,url2` with health-check and automatic failover.
 - **Machine-readable errors** — every error result now also carries `error_code` (and `error_causes` when all backends fail). The v1 `error` string field is unchanged.

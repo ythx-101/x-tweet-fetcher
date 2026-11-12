@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### 新增
+
+- Nitter：纯 HTTP 抓取 X Lists；router 对 Lists 先 Nitter 后浏览器（`3070293`）
+- Nitter：回复中抓取作者自回复串，并展开回复中的短链接（`00112a4`）
+
+### 修复
+
+- `--text-only` 的 search / user-info 输出改走 i18n，`--lang en` 时输出英文（默认中文输出不变）
+- `User-Agent` 跟随当前版本号（`x-tweet-fetcher/3.1.0`）
+
+### 文档
+
+- 修正 Lists 后端说明（Nitter 优先，浏览器兜底）、Camofox 链接、自建 Nitter 指引
+- 安装方式：未发布到 PyPI，请从源码或 git 安装（`pip install git+https://github.com/ythx-101/x-tweet-fetcher`）
+- README 新增中文简介、使用场景/替代方案、FAQ；新增 `llms.txt`；补全 `pyproject.toml` 元数据
+
 ## 3.1.0 (2026-08-09)
 
 ### 新增：推文库 (Ledger)

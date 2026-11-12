@@ -7,7 +7,8 @@ and raise ``AllBackendsFailed`` (with per-backend causes) if none worked.
 
 Priority per capability:
   timeline / replies / search   nitter -> browser
-  list / article                browser only
+  list                          nitter -> browser
+  article                       browser only
   single tweet / user-info      fxtwitter only
 """
 from __future__ import annotations

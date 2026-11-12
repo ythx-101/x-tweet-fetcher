@@ -11,12 +11,12 @@ _MESSAGES = {
         "err_camofox_not_running_user": (
             "Camofox 未在 localhost:{port} 运行。"
             "使用 --user 前请先启动 Camofox。"
-            "参考: https://github.com/openclaw/camofox"
+            "参考: https://github.com/jo-inc/camofox-browser"
         ),
         "err_camofox_not_running_replies": (
             "Camofox 未在 localhost:{port} 运行。"
             "使用 --replies 前请先启动 Camofox。"
-            "参考: https://github.com/openclaw/camofox"
+            "参考: https://github.com/jo-inc/camofox-browser"
         ),
         "err_snapshot_failed": "无法从 Camofox 获取页面快照",
         "err_mutually_exclusive": "错误：--user、--url、--article、--monitor 和 --list 不能同时使用",
@@ -44,7 +44,7 @@ _MESSAGES = {
         "err_camofox_not_running_article": (
             "Camofox 未在 localhost:{port} 运行。"
             "使用 --article 前请先启动 Camofox。"
-            "参考: https://github.com/openclaw/camofox"
+            "参考: https://github.com/jo-inc/camofox-browser"
         ),
         "err_invalid_article": "无法解析 Article URL 或 ID: {input}",
         "article_header": "X Article: {title}",
@@ -64,16 +64,22 @@ _MESSAGES = {
         "monitor_camofox_error": (
             "Camofox 未在 localhost:{port} 运行。"
             "使用 --monitor 前请先启动 Camofox。"
-            "参考: https://github.com/openclaw/camofox"
+            "参考: https://github.com/jo-inc/camofox-browser"
         ),
         "monitor_header": "@{username} 的新 mentions ({count} 条)",
         # list mode
         "list_header": "X List {list_id} — 最新 {count} 条推文",
         "err_invalid_list": "无法解析 List URL 或 ID: {input}",
+        # text-only output (search / user-info)
+        "err_text_prefix": "错误: {error}",
+        "search_header": '搜索 "{query}" — {count} 条结果',
+        "info_bio": "简介: {bio}",
+        "info_counts": "推文: {tweets} | 关注: {following} | 粉丝: {followers}",
+        "info_joined": "加入: {joined}",
         "err_camofox_not_running_list": (
             "Camofox 未在 localhost:{port} 运行。"
             "使用 --list 前请先启动 Camofox。"
-            "参考: https://github.com/openclaw/camofox"
+            "参考: https://github.com/jo-inc/camofox-browser"
         ),
     },
     "en": {
@@ -83,12 +89,12 @@ _MESSAGES = {
         "err_camofox_not_running_user": (
             "Camofox is not running on localhost:{port}. "
             "Please start Camofox before using --user. "
-            "See: https://github.com/openclaw/camofox"
+            "See: https://github.com/jo-inc/camofox-browser"
         ),
         "err_camofox_not_running_replies": (
             "Camofox is not running on localhost:{port}. "
             "Please start Camofox before using --replies. "
-            "See: https://github.com/openclaw/camofox"
+            "See: https://github.com/jo-inc/camofox-browser"
         ),
         "err_snapshot_failed": "Failed to get page snapshot from Camofox",
         "err_mutually_exclusive": "Error: --user, --url, --article, --monitor, and --list are mutually exclusive",
@@ -115,7 +121,7 @@ _MESSAGES = {
         "err_camofox_not_running_article": (
             "Camofox is not running on localhost:{port}. "
             "Please start Camofox before using --article. "
-            "See: https://github.com/openclaw/camofox"
+            "See: https://github.com/jo-inc/camofox-browser"
         ),
         "err_invalid_article": "Cannot parse Article URL or ID: {input}",
         "article_header": "X Article: {title}",
@@ -134,16 +140,22 @@ _MESSAGES = {
         "monitor_camofox_error": (
             "Camofox is not running on localhost:{port}. "
             "Please start Camofox before using --monitor. "
-            "See: https://github.com/openclaw/camofox"
+            "See: https://github.com/jo-inc/camofox-browser"
         ),
         "monitor_header": "New mentions for @{username} ({count})",
         # list mode
         "list_header": "X List {list_id} — latest {count} tweets",
         "err_invalid_list": "Cannot parse List URL or ID: {input}",
+        # text-only output (search / user-info)
+        "err_text_prefix": "Error: {error}",
+        "search_header": 'Search "{query}" — {count} results',
+        "info_bio": "Bio: {bio}",
+        "info_counts": "Tweets: {tweets} | Following: {following} | Followers: {followers}",
+        "info_joined": "Joined: {joined}",
         "err_camofox_not_running_list": (
             "Camofox is not running on localhost:{port}. "
             "Please start Camofox before using --list. "
-            "See: https://github.com/openclaw/camofox"
+            "See: https://github.com/jo-inc/camofox-browser"
         ),
     },
 }

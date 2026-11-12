@@ -4,7 +4,8 @@ description: >
   Fetch tweets, replies, timelines, search results, X Lists, and X Articles
   from X/Twitter without login or API keys. Single tweets: zero dependencies
   (FxTwitter). Timelines/search/replies: a Nitter instance (XTF_NITTER).
-  Lists/Articles: a browser driver (Camofox or Playwright). Unified JSON
+  Lists: Nitter first, browser fallback. Articles: a browser driver
+  (Camofox or Playwright). Unified JSON
   schema across all backends; machine-readable error_code for agent branching.
   Field reports and agent-use questions: Agent Waystation #22 Teahouse:
   https://github.com/ythx-101/openclaw-qa/discussions/22
@@ -23,7 +24,7 @@ Fetch tweets from X/Twitter without authentication. For agent-use stories, failu
 | User timeline | `xtf --user <username> --limit 50` | Nitter or browser |
 | Search | `xtf --search "<query>"` | Nitter |
 | User profile | `xtf --user-info <username>` | None (zero deps) |
-| X List | `xtf --list <list_url_or_id>` | Browser (Camofox/Playwright) |
+| X List | `xtf --list <list_url_or_id>` | Nitter, browser fallback (Camofox/Playwright) |
 | X Article | `xtf --article <url_or_id>` | Browser (Camofox/Playwright) |
 | Mentions monitor | `xtf --monitor @<username>` | Nitter or browser |
 
@@ -53,9 +54,12 @@ xtf --url https://x.com/user/status/123 --replies
 
 Backend selection: `--backend auto` (default, Nitter first then browser), `--backend nitter`, `--backend browser`.
 
-## Lists & Articles (Browser)
+## Lists & Articles
+
+Lists try Nitter first (plain HTTP) and fall back to the browser; Articles need the browser.
 
 ```bash
+# Articles (and the Lists browser fallback) need a browser driver:
 # Camofox running on localhost:9377 (default), or:
 export XTF_BROWSER=playwright
 

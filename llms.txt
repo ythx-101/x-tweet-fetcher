@@ -1,0 +1,37 @@
+# x-tweet-fetcher
+
+> x-tweet-fetcher (`xtf`) is a Python CLI and library that lets AI agents and developers fetch X/Twitter tweets, replies, timelines, search results, Lists and X Articles without logging in or using the X API. 免登录、免 API key 抓取 X（推特）内容。
+
+- Read-only. Stdlib-only Python (3.10+), MIT license. Not published on PyPI.
+- Backends with automatic fallback: FxTwitter (single tweets, profiles), Nitter (timelines, search, replies, mentions, Lists; plain HTTP), browser driver (Camofox or Playwright; X Articles, and fallback for timelines, replies, mentions and Lists).
+- Lists: Nitter first, browser fallback. Articles: browser only.
+- Output is one unified JSON schema (Tweet / Reply / Profile / Article).
+- Errors carry `error_code`: `invalid_input`, `not_found`, `rate_limited`, `upstream_down`, `backend_unavailable`, `all_backends_failed` (with per-backend `error_causes`).
+- Optional local SQLite archive: `--ledger <db>`, then `--query` / `--stats` offline.
+
+## Install
+
+    pip install git+https://github.com/ythx-101/x-tweet-fetcher
+
+## Minimal usage
+
+    xtf --url https://x.com/user/status/1234567890
+    export XTF_NITTER=http://127.0.0.1:8788
+    xtf --user someuser --limit 20
+    xtf --search "query" --limit 10
+    xtf --list 1455045069516357634
+    xtf --article https://x.com/i/article/2011779830157557760
+
+## Configuration (environment variables)
+
+- `XTF_NITTER`: comma-separated Nitter instances, tried in order (default `http://127.0.0.1:8788`)
+- `XTF_BROWSER`: `camofox` (default) or `playwright`
+- `XTF_BROWSER_PORT`: Camofox HTTP port (default `9377`)
+- `XTF_LANG`: message language, `zh` (default) or `en`
+
+## Docs
+
+- [README](https://github.com/ythx-101/x-tweet-fetcher/blob/main/README.md): overview, backends, capabilities, FAQ
+- [SKILL.md](https://github.com/ythx-101/x-tweet-fetcher/blob/main/SKILL.md): agent-oriented command reference
+- [MIGRATION.md](https://github.com/ythx-101/x-tweet-fetcher/blob/main/MIGRATION.md): migrating from v1
+- [CHANGELOG.md](https://github.com/ythx-101/x-tweet-fetcher/blob/main/CHANGELOG.md): release notes

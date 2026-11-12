@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compatibility shim — v1 entry point, forwards to the xtf package.
 
-Prefer: pip install x-tweet-fetcher && xtf --url <URL>
+Prefer: pip install . (or pip install git+https://github.com/ythx-101/x-tweet-fetcher) && xtf --url <URL>
 """
 import sys
 from pathlib import Path

@@ -67,7 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  --user-info <username>   User profile via FxTwitter\n"
             "  --article <URL_or_ID>    X Article full text via browser\n"
             "  --monitor @username      Monitor X mentions (incremental, cron-friendly)\n"
-            "  --list <list_url_or_id>  Fetch tweets from an X List via browser\n"
+            "  --list <list_url_or_id>  Fetch tweets from an X List via Nitter (browser fallback)\n"
             "\n"
             "Backends: auto (default, Nitter first then browser), nitter, browser.\n"
             "Configure Nitter instances via XTF_NITTER=url1,url2 (see README)."
@@ -83,7 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--monitor", "-m", metavar="@USERNAME",
                         help="Monitor X mentions for a username")
     parser.add_argument("--list", "-l", metavar="LIST_URL_OR_ID",
-                        help="Fetch tweets from an X List (URL or ID, requires browser)")
+                        help="Fetch tweets from an X List (URL or ID; Nitter first, browser fallback)")
     parser.add_argument("--limit", type=int, default=50,
                         help="Max tweets for --user / max results for --monitor (default: 50 for --user, 10 for --monitor)")
     parser.add_argument("--replies", "-r", action="store_true", help="Fetch replies")
@@ -177,7 +177,7 @@ def main(argv=None) -> None:
             if result.get("error"):
                 print(t("err_prefix") + result["error"], file=sys.stderr)
                 sys.exit(1)
-            print(f'搜索 "{args.search}" — {result["count"]} 条结果\n')
+            print(t("search_header", query=args.search, count=result["count"]) + "\n")
             for i, tw in enumerate(result["tweets"], 1):
                 print(f"[{i}] {tw.get('author_name','')} ({tw.get('author','')}) · {tw.get('time_ago','')}")
                 print(f"     {tw.get('text','')[:200]}")
@@ -196,14 +196,16 @@ def main(argv=None) -> None:
             result = _fail({"username": args.user_info}, e)
         if args.text_only:
             if result.get("error"):
-                print(f"错误: {result['error']}", file=sys.stderr)
+                print(t("err_text_prefix", error=result["error"]), file=sys.stderr)
                 sys.exit(1)
             print(f"@{result.get('username','')} ({result.get('display_name','')})")
             if result.get("bio"):
-                print(f"简介: {result['bio']}")
-            print(f"推文: {result.get('tweets_count',0)} | 关注: {result.get('following',0)} | 粉丝: {result.get('followers',0)}")
+                print(t("info_bio", bio=result["bio"]))
+            print(t("info_counts", tweets=result.get("tweets_count", 0),
+                         following=result.get("following", 0),
+                         followers=result.get("followers", 0)))
             if result.get("joined"):
-                print(f"加入: {result['joined']}")
+                print(t("info_joined", joined=result["joined"]))
         else:
             _emit(result, pretty)
         sys.exit(1 if result.get("error") else 0)
